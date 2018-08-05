@@ -26,7 +26,18 @@ lazy val core =
       libraryDependencies ++= Seq("com.chuusai" %%% "shapeless" % "2.3.3")
     )
     .jvmSettings()
-    .jsSettings()
+    .jsSettings(
+      scalaJSUseMainModuleInitializer := true,
+      skip in packageJSDependencies := false,
+      inConfig(Compile)(
+        Seq(
+          fullOptJS,
+          fastOptJS,
+          packageJSDependencies,
+          packageMinifiedJSDependencies
+        ).map(f => (crossTarget in f) ~= (_ / "sjsout"))
+      )
+    )
 
 // Needed, so sbt finds the projects
 lazy val coreJVM = core.jvm
@@ -52,6 +63,7 @@ lazy val jsExample = project.in(file("example/inJS"))
   )
   .settings(
     scalaJSUseMainModuleInitializer := true,
+    skip in packageJSDependencies := false,
     inConfig(Compile)(
       Seq(
         fullOptJS,
@@ -60,7 +72,6 @@ lazy val jsExample = project.in(file("example/inJS"))
         packageMinifiedJSDependencies
       ).map(f => (crossTarget in f) ~= (_ / "sjsout"))
     ))
-  .settings(skip in packageJSDependencies := false)
 
 
 
