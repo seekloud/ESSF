@@ -9,7 +9,8 @@ lazy val baseSettings = Seq(
     //"-deprecation",
     "-feature"
   ),
-  javacOptions ++= Seq("-encoding", "UTF-8")
+  javacOptions ++= Seq("-encoding", "UTF-8"),
+  resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
 )
 
 
@@ -23,7 +24,9 @@ lazy val core =
       publishSettings
     )
     .settings(
-      libraryDependencies ++= Seq("com.chuusai" %%% "shapeless" % "2.3.3")
+      libraryDependencies ++= Seq(
+        "org.seekloud" %%% "byteobject" % "0.1.1",
+      )
     )
     .jvmSettings()
     .jsSettings(
@@ -85,9 +88,9 @@ lazy val publishSettings = Seq(
       Some("releases" at nexus + "service/local/staging/deploy/maven2")
   },
   // 本地maven仓库位置
-/*  publishTo := Some(
-    Resolver.file("file", new File(Path.userHome.absolutePath + "/repos"))),
-*/pomIncludeRepository := { _ => false },
+  /*  publishTo := Some(
+      Resolver.file("file", new File(Path.userHome.absolutePath + "/repos"))),
+  */ pomIncludeRepository := { _ => false },
   publishMavenStyle := true,
   publishArtifact in Test := false,
   pomExtra :=
