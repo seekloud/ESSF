@@ -4,16 +4,14 @@ import org.seekloud.essf.Simulator
 
 /**
   * User: Taoz
-  * Date: 8/5/2018
-  * Time: 6:15 PM
+  * Date: 8/6/2018
+  * Time: 9:52 AM
   */
 object Test {
 
   def main(args: Array[String]): Unit = {
-    val self = this.getClass.toString
-    println(s"i am $self")
+    println(s"hi, I am ${this.getClass.toString}")
     Simulator.helloWorld()
-    println("DONE>")
   }
 
 }

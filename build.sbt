@@ -1,4 +1,3 @@
-import sbtcrossproject.CrossPlugin.autoImport.{crossProject, CrossType}
 
 
 lazy val baseSettings = Seq(
@@ -9,15 +8,12 @@ lazy val baseSettings = Seq(
     //"-deprecation",
     "-feature"
   ),
-  javacOptions ++= Seq("-encoding", "UTF-8"),
-  resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
+  javacOptions ++= Seq("-encoding", "UTF-8")
 )
 
 
 lazy val core =
-  crossProject(JSPlatform, JVMPlatform)
-    .crossType(CrossType.Full)
-    .in(file("core"))
+  project.in(file("core"))
     .settings(
       name := "essf",
       baseSettings,
@@ -25,57 +21,19 @@ lazy val core =
     )
     .settings(
       libraryDependencies ++= Seq(
-        "org.seekloud" %%% "byteobject" % "0.1.1",
-      )
-    )
-    .jvmSettings()
-    .jsSettings(
-      scalaJSUseMainModuleInitializer := true,
-      skip in packageJSDependencies := false,
-      inConfig(Compile)(
-        Seq(
-          fullOptJS,
-          fastOptJS,
-          packageJSDependencies,
-          packageMinifiedJSDependencies
-        ).map(f => (crossTarget in f) ~= (_ / "sjsout"))
+        "org.scalatest" %% "scalatest" % "3.0.5" % "test",
       )
     )
 
-// Needed, so sbt finds the projects
-lazy val coreJVM = core.jvm
-lazy val coreJS = core.js
 
 
 
-
-lazy val jvmExample = project.in(file("example/inJVM"))
-  .dependsOn(coreJVM)
+lazy val example = project.in(file("example"))
+  .dependsOn(core)
   .settings(
-    name := "jvmExample",
+    name := "example",
     baseSettings
   )
-
-
-lazy val jsExample = project.in(file("example/inJS"))
-  .dependsOn(coreJS)
-  .enablePlugins(ScalaJSPlugin)
-  .settings(
-    name := "jsExample",
-    baseSettings
-  )
-  .settings(
-    scalaJSUseMainModuleInitializer := true,
-    skip in packageJSDependencies := false,
-    inConfig(Compile)(
-      Seq(
-        fullOptJS,
-        fastOptJS,
-        packageJSDependencies,
-        packageMinifiedJSDependencies
-      ).map(f => (crossTarget in f) ~= (_ / "sjsout"))
-    ))
-
 
 
 

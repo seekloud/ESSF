@@ -1,8 +1,4 @@
 
-val sbtScalaJsV = "0.6.24"
-
-addSbtPlugin("org.portable-scala" % "sbt-scalajs-crossproject" % "0.5.0")
-addSbtPlugin("org.scala-js" % "sbt-scalajs" % sbtScalaJsV)
 
 addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.1.1")
 addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "2.3")
