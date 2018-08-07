@@ -8,6 +8,7 @@ lazy val baseSettings = Seq(
     //"-deprecation",
     "-feature"
   ),
+  resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
   javacOptions ++= Seq("-encoding", "UTF-8")
 )
 

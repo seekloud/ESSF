@@ -42,7 +42,7 @@ object BoxType{
 
 
 
-final class EOEP_Box extends Box {
+final class EOEP_Box() extends Box {
 
   override val boxType: String = BoxType.eoep
   override def size: Int = 2 + 4
@@ -60,7 +60,7 @@ final class EOEP_Box extends Box {
 
 }
 
-final class EBIF_Box extends Box {
+final class EBIF_Box() extends Box {
 
   override val boxType: String = BoxType.ebif
   override def size: Int = (2 + 4) + 1 + 4 + 2 + 4 + 8
@@ -72,6 +72,23 @@ final class EBIF_Box extends Box {
   var snapshotCount: Int = -1
   var createTime: Long = -1l
 
+  private val payload = List(
+    version,
+    frameCount,
+    frameMilliSeconds,
+    snapshotCount,
+    createTime
+  )
+
+
+  def readPayload1(buf: ByteBuffer): EBIF_Box = {
+    version = buf.get()
+    frameCount = buf.getInt()
+    frameMilliSeconds = buf.getShort()
+    snapshotCount = buf.getInt()
+    createTime = buf.getLong
+    this
+  }
   override def readPayload(buf: ByteBuffer): EBIF_Box = {
     version = buf.get()
     frameCount = buf.getInt()

@@ -23,7 +23,7 @@ class WriterTest extends UnitSpec {
 
 
   "A Writer" should "write box in file without exception" in {
-    val file = "test1.essf"
+    val file = "test_data/test1.essf"
     val writer = new ESSFWriter(file)
     val box = new EBIF_Box
     box.version = 1
@@ -33,6 +33,7 @@ class WriterTest extends UnitSpec {
     box.frameMilliSeconds = 150
 
     writer.put(box)
+    writer.close()
     assert(true)
 
   }

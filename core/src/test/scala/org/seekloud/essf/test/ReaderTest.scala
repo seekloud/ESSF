@@ -12,7 +12,7 @@ class ReaderTest extends UnitSpec {
 
   "A reader" should "read data success" in {
 
-    val file = "test1.essf"
+    val file = "test_data/test1.essf"
     val reader = new ESSFReader(file)
     val box = reader.get()
     println(s"box: $box")

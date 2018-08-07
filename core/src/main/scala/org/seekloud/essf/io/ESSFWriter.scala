@@ -16,21 +16,22 @@ private[essf] class ESSFWriter(file: String) {
 
   final val DEFAULT_BUFFER_SIZE = 32 * 1024
   private val fc = new FileOutputStream(new File(file)).getChannel
-  private val defaultBuffer = ByteBuffer.allocate(DEFAULT_BUFFER_SIZE)
+  private val defaultBuffer = ByteBuffer.allocateDirect(DEFAULT_BUFFER_SIZE)
 
 
   def put(box: Box): ESSFWriter = {
     val boxSize = box.size
-    defaultBuffer.clear()
     val buf =
       if (defaultBuffer.capacity() < boxSize) {
         ByteBuffer.allocate(boxSize)
       } else defaultBuffer
+    buf.clear()
     writeHead(buf, boxSize, box.boxType)
     box.writePayload(buf)
+    buf.flip()
+    fc.write(buf)
     this
   }
-
 
   def close(): Unit = {
     fc.close()
@@ -47,7 +48,7 @@ object ESSFWriter{
     } else {
       buffer.putShort(boxSize.toShort)
     }
-    buffer.put(boxType.substring(0, 4).getBytes("utf-8"))
+    buffer.put(boxType.getBytes("utf-8"))
     if (boxSize > Short.MaxValue) {
       buffer.putInt(boxSize)
     }
