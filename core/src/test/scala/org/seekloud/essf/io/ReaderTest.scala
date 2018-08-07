@@ -1,6 +1,7 @@
-package org.seekloud.essf.test
+package org.seekloud.essf.io
 
-import org.seekloud.essf.io.ESSFReader
+import org.seekloud.essf.box.BoxType
+import org.seekloud.essf.test.UnitSpec
 
 /**
   * User: Taoz
@@ -16,7 +17,7 @@ class ReaderTest extends UnitSpec {
     val reader = new ESSFReader(file)
     val box = reader.get()
     println(s"box: $box")
-    assert(true)
+    assert(box.boxType == BoxType.ebif)
 
   }
 

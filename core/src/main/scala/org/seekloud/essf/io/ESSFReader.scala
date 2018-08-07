@@ -6,6 +6,8 @@ import java.nio.channels.FileChannel
 
 import org.seekloud.essf.box.{Box, BoxType, EBIF_Box, EOEP_Box}
 
+import scala.util.Try
+
 /**
   * User: Taoz
   * Date: 8/6/2018
@@ -37,14 +39,13 @@ private[essf] class ESSFReader(file: String) {
 
 
   private[this] def decodeBox(boxType: String, buf: ByteBuffer): Box = {
-    val box = boxType match {
-      case BoxType.ebif => new EBIF_Box()
-      case BoxType.eoep => new EOEP_Box()
+    val boxTry: Try[Box] = boxType match {
+      case BoxType.ebif => EBIF_Box.readFromBuffer(buf)
+      case BoxType.eoep => EOEP_Box.readFromBuffer(buf)
       case x =>
         throw new RuntimeException(s"unknown boxType error: $x")
     }
-    box.readPayload(buf)
-    box
+    boxTry.get
   }
 
   def close(): Unit = {
@@ -55,25 +56,25 @@ private[essf] class ESSFReader(file: String) {
 
 object ESSFReader {
 
-  private[this] val headBuffer = ByteBuffer.allocateDirect(32)
+  private[this] val hBuff = ByteBuffer.allocateDirect(32)
 
 
   private def readHead(fc: FileChannel): (Int, String, Int) = {
-    headBuffer.clear()
-    headBuffer.limit(6)
-    fc.read(headBuffer)
-    headBuffer.flip()
-    var boxSize: Int = headBuffer.getShort()
-    val typeStrArray = new Array[Byte](4)
-    headBuffer.get(typeStrArray)
-    val boxType = new String(typeStrArray, "utf-8")
+    hBuff.clear()
+    hBuff.limit(6)
+    fc.read(hBuff)
+    hBuff.flip()
+    var boxSize: Int = hBuff.getShort()
+    val tmpArr = new Array[Byte](4)
+    hBuff.get(tmpArr)
+    val boxType = new String(tmpArr, "utf-8")
     var payloadSize = boxSize - 6
     if (boxSize == 1) {
-      headBuffer.clear()
-      headBuffer.limit(4)
-      fc.read(headBuffer)
-      headBuffer.flip()
-      boxSize = headBuffer.getInt()
+      hBuff.clear()
+      hBuff.limit(4)
+      fc.read(hBuff)
+      hBuff.flip()
+      boxSize = hBuff.getInt()
       payloadSize = boxSize - 10
     }
 
