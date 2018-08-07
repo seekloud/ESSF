@@ -15,7 +15,6 @@ class FrameInputStream(file: String) {
   private var position = 0
   private var epInfo: Option[EpisodeInfo] = None
   private var nextBox: Option[Box] = None
-  private var nextFrame: Option[FrameData] = None
 
   def init(): SimulatorInfo = {
     nextBox = Some(boxReader.get()) //First box must be exist.
@@ -45,17 +44,13 @@ class FrameInputStream(file: String) {
     box
   }
 
-  private def hasNext: Boolean = nextBox.isDefined
-
-
-
-  def readFrame(): FrameData = {
-
-    val eventBox = readBox().asInstanceOf[SLFR_Box]
-
-
-
-    ???
+  def readFrame(): Option[FrameData] = {
+    nextBox match {
+      case Some(SLFR_Box(frameIndex, eData, sData)) =>
+        readBox() // update, important
+        val frameData = FrameData(frameIndex, eData, sData)
+        Some(frameData)
+      case _ => None
+    }
   }
-
 }
