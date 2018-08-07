@@ -9,18 +9,23 @@ import java.nio.charset.Charset
   * Date: 8/6/2018
   * Time: 2:04 PM
   */
-trait Box {
+abstract class Box(final val boxType: String) {
 
-  final val defaultHeadSize: Int = 6
-  val boxType: String
-  def size: Int
+  lazy val size: Int = {
+    val len = 6 + payloadSize
+    if (len > Short.MaxValue) {
+      len + 2
+    } else len
+  }
+
+  val payloadSize: Int
+
   def writePayload(buf: ByteBuffer): ByteBuffer
 
 }
 
 
 object Box {
-
 
 
 }

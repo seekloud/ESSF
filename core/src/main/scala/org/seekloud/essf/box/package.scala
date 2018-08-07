@@ -13,21 +13,20 @@ import scala.util.Try
 package object box {
 
   object BoxType {
-    val ebif = "ebif"
+    val epif = "epif"
     val stix = "stix"
-    val epst = "stix"
-    val eoep = "eoep"
+    val epst = "epst"
+    val eofl = "eofl"
 
     val smli = "smli"
-    val smlv = "smlv"
-    val smlm = "smli"
-    val slen = "slev"
-    val slst = "slst"
+    val smlm = "smlm"
+    val slfr = "slfr"
   }
 
 
   /*
     ===============  episode box ==================
+    val flmt = "flmt"
     val ebif = "ebif"
     val stix = "stix"
     val epst = "stix"
@@ -35,51 +34,59 @@ package object box {
    */
 
 
-
-  final case class EBIF_Box(
+  final case class FLMT_Box(
     version: Byte,
-    frameCount: Int,
-    frameMilliSeconds: Short,
-    snapshotCount: Int,
     createTime: Long
-  ) extends Box {
-
-    override val boxType: String = BoxType.ebif
-    override def size: Int = defaultHeadSize + 1 + 4 + 2 + 4 + 8
+  ) extends Box(BoxType.epif) {
+    override lazy val payloadSize: Int = 1 + 8
 
     override def writePayload(buf: ByteBuffer): ByteBuffer = {
       buf.put(version)
-      buf.putInt(frameCount)
-      buf.putShort(frameMilliSeconds)
-      buf.putInt(snapshotCount)
       buf.putLong(createTime)
       buf
     }
   }
 
-  object EBIF_Box {
-    def readFromBuffer(buf: ByteBuffer): Try[EBIF_Box] = Try{
+  object FLMT_Box {
+    def readFromBuffer(buf: ByteBuffer): Try[FLMT_Box] = Try {
       val version = buf.get()
+      val createTime = buf.getLong
+      FLMT_Box(version, createTime)
+    }
+  }
+
+
+  final case class EPIF_Box(
+    frameCount: Int,
+    frameMilliSeconds: Short,
+    snapshotCount: Int
+  ) extends Box(BoxType.epif) {
+
+    override lazy val payloadSize: Int = 4 + 2 + 4
+
+    override def writePayload(buf: ByteBuffer): ByteBuffer = {
+      buf.putInt(frameCount)
+      buf.putShort(frameMilliSeconds)
+      buf.putInt(snapshotCount)
+      buf
+    }
+  }
+
+  object EPIF_Box {
+    def readFromBuffer(buf: ByteBuffer): Try[EPIF_Box] = Try {
       val frameCount = buf.getInt()
       val frameMilliSeconds = buf.getShort()
       val snapshotCount = buf.getInt()
-      val createTime = buf.getLong
-      EBIF_Box(version, frameCount, frameMilliSeconds, snapshotCount, createTime)
+      EPIF_Box(frameCount, frameMilliSeconds, snapshotCount)
     }
   }
 
 
   final case class STIX_Box(
-    stateIndexMap : mutable.TreeMap[Int, Long]
-  ) extends Box {
+    stateIndexMap: mutable.TreeMap[Int, Long]
+  ) extends Box(BoxType.stix) {
 
-    override val boxType: String = BoxType.stix
-    override def size: Int = {
-      val len = defaultHeadSize + (stateIndexMap.size * 12) + 4
-      if (len > Short.MaxValue) {
-        len + 2
-      } else len
-    }
+    override lazy val payloadSize: Int = 12 * stateIndexMap.size + 4
 
     override def writePayload(buf: ByteBuffer): ByteBuffer = {
       buf.putInt(stateIndexMap.size)
@@ -91,7 +98,7 @@ package object box {
     }
   }
 
-  object STIX_Box{
+  object STIX_Box {
     def readFromBuffer(buf: ByteBuffer) = Try {
       val stateIndexMap = new mutable.TreeMap[Int, Long]()
       var len = buf.getInt()
@@ -108,10 +115,9 @@ package object box {
   }
 
 
-  final case class EPST_Box(data: Int) extends Box {
+  final case class EPST_Box(data: Int) extends Box(BoxType.epst) {
 
-    override val boxType: String = BoxType.epst
-    override def size: Int = defaultHeadSize + 4
+    override lazy val payloadSize: Int = 4
 
     override def writePayload(buf: ByteBuffer): ByteBuffer = {
       buf.putInt(data)
@@ -121,19 +127,16 @@ package object box {
   }
 
   object EPST_Box {
-    def readFromBuffer(buf: ByteBuffer) = Try{
+    def readFromBuffer(buf: ByteBuffer) = Try {
       val data = buf.get()
       EPST_Box(data)
     }
   }
 
 
+  final case class EOFL_Box() extends Box(BoxType.eofl) {
 
-
-  final case class EOEP_Box() extends Box {
-
-    override val boxType: String = BoxType.eoep
-    override def size: Int = defaultHeadSize
+    override lazy val payloadSize: Int = 0
 
     override def writePayload(buf: ByteBuffer): ByteBuffer = {
       buf
@@ -141,46 +144,119 @@ package object box {
 
   }
 
-  object EOEP_Box{
-    def readFromBuffer(buf: ByteBuffer) =Try {
-      EOEP_Box()
+  object EOFL_Box {
+    def readFromBuffer(buf: ByteBuffer) = Try {
+      EOFL_Box()
     }
   }
-
-
 
 
   /*
    ===================   simulator box   =====================
     val smli = "smli"
-    val smlv = "smlv"
-    val smlm = "smli"
-    val slen = "slev"
-    val slst = "slst"
+    val smlm = "smlm"
+    val slev = "slev"
    */
 
 
-  final case class SMLI_Box(id: String) extends Box {
+  final case class SMLI_Box(id: String, version: String) extends Box(BoxType.smli) {
 
-    override val boxType: String = BoxType.smli
+    private val idBytes = id.getBytes("utf-8")
+    private val verBytes = version.getBytes("utf-8")
+    assert(idBytes.length < 127)
+    assert(verBytes.length < 127)
 
-    override def size: Int = defaultHeadSize
+    override lazy val payloadSize: Int = 1 + idBytes.length + 1 + verBytes.length
 
     override def writePayload(buf: ByteBuffer): ByteBuffer = {
-      val bytes = id.getBytes("utf-8")
-      assert(bytes.length < 127)
-      buf.put(bytes.length.toByte)
-      buf.put(bytes)
+      buf.put(idBytes.length.toByte)
+      buf.put(idBytes)
+      buf.put(verBytes.length.toByte)
+      buf.put(verBytes)
       buf
     }
   }
 
-  object SMLI_Box{
-    def readFromBuffer(buf: ByteBuffer) = Try{
-      val len = buf.get()
-      val array = new Array[Byte](len)
-      val id = new String(array, "UTF-8")
-      SMLI_Box(id)
+  object SMLI_Box {
+    def readFromBuffer(buf: ByteBuffer) = Try {
+      val idLen = buf.get()
+      val idArr = new Array[Byte](idLen)
+      buf.get(idArr)
+      val id = new String(idArr, "UTF-8")
+
+      val verLen = buf.get()
+      val verArr = new Array[Byte](verLen)
+      buf.get(verArr)
+      val ver = new String(verArr, "UTF-8")
+
+      SMLI_Box(id, ver)
+    }
+  }
+
+
+  final case class SMLM_Box(metadata: Array[Byte]) extends Box(BoxType.smlm) {
+    assert(metadata.length < Short.MaxValue)
+
+    override lazy val payloadSize: Int = 2 + metadata.length
+
+    override def writePayload(buf: ByteBuffer): ByteBuffer = {
+      buf.putShort(metadata.length.toByte)
+      buf.put(metadata)
+      buf
+    }
+  }
+
+  object SMLM_Box {
+    def readFromBuffer(buf: ByteBuffer) = Try {
+      val len = buf.getShort()
+      val metadata = new Array[Byte](len)
+      buf.get(metadata)
+      SMLM_Box(metadata)
+    }
+  }
+
+
+  final case class SLFR_Box(
+    frameIndex: Int,
+    eventsData: Array[Byte],
+    currState: Option[Array[Byte]]
+  ) extends Box(BoxType.slfr) {
+    override lazy val payloadSize: Int = 4 + 4 + eventsData.length + 1 + currState.map(_.length + 4).getOrElse(0)
+
+    override def writePayload(buf: ByteBuffer): ByteBuffer = {
+      buf.putInt(frameIndex)
+      buf.putInt(eventsData.length.toByte)
+      buf.put(eventsData)
+      currState match {
+        case Some(arr) =>
+          buf.put(1.toByte)
+          buf.putInt(arr.length)
+          buf.put(arr)
+        case None =>
+          buf.put(0.toByte)
+      }
+
+      buf
+    }
+  }
+
+  object SLFR_Box {
+    def readFromBuffer(buf: ByteBuffer) = Try {
+      val frameIndex = buf.getInt()
+      val len = buf.getInt()
+      val eventsData = new Array[Byte](len)
+      buf.get(eventsData)
+      val hasState = buf.get() == 1
+      val state =
+        if (hasState) {
+          val l = buf.getInt()
+          val stateData = new Array[Byte](l)
+          buf.get(stateData)
+          Some(stateData)
+        } else {
+          None
+        }
+      SLFR_Box(frameIndex, eventsData, state)
     }
   }
 

@@ -4,7 +4,7 @@ import java.io.{File, FileInputStream}
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 
-import org.seekloud.essf.box.{Box, BoxType, EBIF_Box, EOEP_Box}
+import org.seekloud.essf.box.{Box, BoxType, EPIF_Box, EOFL_Box}
 
 import scala.util.Try
 
@@ -40,8 +40,8 @@ private[essf] class ESSFReader(file: String) {
 
   private[this] def decodeBox(boxType: String, buf: ByteBuffer): Box = {
     val boxTry: Try[Box] = boxType match {
-      case BoxType.ebif => EBIF_Box.readFromBuffer(buf)
-      case BoxType.eoep => EOEP_Box.readFromBuffer(buf)
+      case BoxType.`epif` => EPIF_Box.readFromBuffer(buf)
+      case BoxType.`eofl` => EOFL_Box.readFromBuffer(buf)
       case x =>
         throw new RuntimeException(s"unknown boxType error: $x")
     }
