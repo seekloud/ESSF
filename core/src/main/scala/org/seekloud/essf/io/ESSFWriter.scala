@@ -33,6 +33,23 @@ private[essf] class ESSFWriter(file: String) {
     this
   }
 
+  def put(box: Box, position: Long): ESSFWriter = {
+    val boxSize = box.size
+    val buf =
+      if (defaultBuffer.capacity() < boxSize) {
+        ByteBuffer.allocate(boxSize)
+      } else defaultBuffer
+    buf.clear()
+    writeHead(buf, boxSize, box.boxType)
+    box.writePayload(buf)
+    buf.flip()
+    val mark = fc.position()
+    fc.position(position)
+    fc.write(buf)
+    fc.position(mark)
+    this
+  }
+
   def close(): Unit = {
     fc.close()
   }

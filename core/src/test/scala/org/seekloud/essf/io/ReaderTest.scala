@@ -17,7 +17,7 @@ class ReaderTest extends UnitSpec {
     val reader = new ESSFReader(file)
     val box = reader.get()
     println(s"box: $box")
-    assert(box.boxType == BoxType.epif)
+    assert(box.boxType == BoxType.episodeInform)
 
   }
 

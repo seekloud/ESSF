@@ -4,7 +4,8 @@ import java.io.{File, FileInputStream}
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 
-import org.seekloud.essf.box.{Box, BoxType, EPIF_Box, EOFL_Box}
+import org.seekloud.essf.box
+import org.seekloud.essf.box._
 
 import scala.util.Try
 
@@ -30,20 +31,41 @@ private[essf] class ESSFReader(file: String) {
     buf.limit(payloadSize)
     fc.read(buf)
     if (buf.hasRemaining) {
-      throw new RuntimeException("buffer not full.")
+      throw new EssfIOException("buffer not full.")
     }
     buf.flip()
     decodeBox(boxType, buf)
   }
 
+  def get(pos: Long): Box = {
+    val mark = fc.position()
+    fc.position(pos)
+    val box = get()
+    fc.position(mark)
+    box
+  }
 
+  def position(pos: Long): Unit = {
+    fc.position(pos)
+  }
 
   private[this] def decodeBox(boxType: String, buf: ByteBuffer): Box = {
     val boxTry: Try[Box] = boxType match {
-      case BoxType.`epif` => EPIF_Box.readFromBuffer(buf)
-      case BoxType.`eofl` => EOFL_Box.readFromBuffer(buf)
+      case BoxType.`fileMeta` => Boxes.EpisodeInform.readFromBuffer(buf)
+      case BoxType.boxPosition => Boxes.BoxPosition.readFromBuffer(buf)
+      case BoxType.episodeInform => Boxes.EpisodeInform.readFromBuffer(buf)
+      case BoxType.episodeStatus => Boxes.EpisodeStatus.readFromBuffer(buf)
+      case BoxType.snapshotPosition => Boxes.SnapshotPosition.readFromBuffer(buf)
+      case BoxType.`endOfFile` => Boxes.EndOfFile.readFromBuffer(buf)
+
+      case BoxType.`simulatorInform` => Boxes.SimulatorInform.readFromBuffer(buf)
+      case BoxType.`simulatorMetadata` => Boxes.SimulatorMetadata.readFromBuffer(buf)
+      case BoxType.`simulatorFrame` => Boxes.SimulatorFrame.readFromBuffer(buf)
+      case BoxType.`endOfFrame` => Boxes.EndOfFrame.readFromBuffer(buf)
+
+        //TODO
       case x =>
-        throw new RuntimeException(s"unknown boxType error: $x")
+        throw new EssfIOException(s"unknown boxType error: $x")
     }
     boxTry.get
   }
@@ -80,4 +102,7 @@ object ESSFReader {
 
     (boxSize, boxType, payloadSize)
   }
+
+
+
 }

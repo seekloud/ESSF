@@ -1,6 +1,6 @@
 package org.seekloud.essf.io
 
-import org.seekloud.essf.box.EPIF_Box
+import org.seekloud.essf.box._
 import org.seekloud.essf.test.UnitSpec
 
 /**
@@ -25,7 +25,7 @@ class WriterTest extends UnitSpec {
   "A Writer" should "write box in file without exception" in {
     val file = "test_data/test1.essf"
     val writer = new ESSFWriter(file)
-    val box = EPIF_Box( 200000, 150, 1000 )
+    val box = Boxes.EpisodeInform(200000, 1000)
     writer.put(box)
     writer.close()
     assert(true)

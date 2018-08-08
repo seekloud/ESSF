@@ -2,7 +2,7 @@ package org.seekloud.essf.io
 
 import org.seekloud.essf.box._
 
-import scala.concurrent.Future
+import scala.collection.mutable
 
 /**
   * User: Taoz
@@ -13,14 +13,12 @@ class FrameOutputStream(
   targetFile: String
 ) {
 
+  private[this] val boxPositions = mutable.HashMap.empty[String, Long]
 
-  val VERSION: Byte = 1.toByte
-
-  private var currentFrame = 0
-  private var snapshotCount = 0
-  private var position = 0
-  private var snapShotIndexSeq = List.empty[(Int, Long)]
-  private val boxWriter: ESSFWriter = new ESSFWriter(targetFile)
+  private[this] var currentFrame = 0
+  private[this] var filePosition = 0l
+  private[this] var snapShotIndexSeq = List.empty[(Int, Long)]
+  private[this] val boxWriter: ESSFWriter = new ESSFWriter(targetFile)
 
   def init(
     simulatorId: String,
@@ -28,54 +26,86 @@ class FrameOutputStream(
     frameMilliSeconds: Short,
     simulatorMetadata: Array[Byte]
   ): FrameOutputStream = {
-    writeBox(FLMT_Box(VERSION, System.currentTimeMillis()))
-    writeBox(EPIF_Box(0, frameMilliSeconds, 0))
-    writeBox(SMLI_Box(simulatorId, dataVersion))
-    writeBox(SMLM_Box(simulatorMetadata))
+    writeBox(Boxes.FileMeta(IO_VERSION, System.currentTimeMillis()))
+    writeBox(Boxes.BoxPosition(-1l), indexIt = true)
+    writeBox(Boxes.EpisodeInform(0, 0), indexIt = true)
+    writeBox(Boxes.SimulatorInform(simulatorId, dataVersion))
+    writeBox(Boxes.SimulatorMetadata(simulatorMetadata))
     this
   }
 
-
   private[this] def updateEpisodeInfo(): Unit = {
+    val box = Boxes.EpisodeInform(currentFrame + 1, snapShotIndexSeq.size)
+    updateBox(box)
+  }
+
+  private[this] def updateBoxPositionBox(): Unit = {
+    val box = Boxes.BoxPosition(boxPositions(BoxType.snapshotPosition))
+    updateBox(box)
   }
 
   private[this] def genSnapshotIndexBox(): Unit = {
+    writeBox(Boxes.SnapshotPosition(snapShotIndexSeq), indexIt = true)
   }
 
-  private[this] def writeEOF(): Unit = {
-    writeBox(EOFL_Box())
-  }
-
-  private[this] def writeBox(box: Box): Int = {
-    val curr = position
-    position += box.size
+  private def writeBox(box: Box, indexIt: Boolean = false): Long = {
+    val curr = filePosition
+    if (indexIt) {
+      boxPositions.put(box.boxType, curr)
+    }
+    filePosition += box.size
     internalWriteBoxToFile(box)
     curr
   }
 
-  private[this] def internalWriteBoxToFile(box: Box): Unit = {
+  private[this] def updateBox(box: Box): Long = {
+
+    val canBeUpdated = box match {
+      case _: Boxes.EpisodeInform => true
+      case _: Boxes.BoxPosition => true
+      case _ => false
+    }
+    if (canBeUpdated) {
+      val pos = boxPositions(box.boxType)
+      internalWriteBoxToFile(box, pos)
+      pos
+    } else {
+      throw new EssfIOException(s"[boxType=${box.boxType}] can not be updated.")
+    }
+
+  }
+
+  private[this] def internalWriteBoxToFile(
+    box: Box,
+    position: Long = -1l
+  ): Unit = {
+
     //TODO use a queue in other thread.
-    boxWriter.put(box)
+    if (position < 0) {
+      boxWriter.put(box)
+    } else {
+      boxWriter.put(box, position)
+    }
   }
 
 
   def writeFrame(eventsData: Array[Byte], stateData: Option[Array[Byte]]): Int = {
     val frameNum = currentFrame
-    if(stateData.isDefined) {
-      snapShotIndexSeq ::= (frameNum, position)
-      snapshotCount += 1
+    if (stateData.isDefined) {
+      snapShotIndexSeq ::= (frameNum, filePosition)
     }
-    writeBox(SLFR_Box(frameNum, eventsData, stateData))
+    writeBox(Boxes.SimulatorFrame(frameNum, eventsData, stateData))
     currentFrame += 1
     frameNum
   }
 
 
   def finish(): Unit = {
+    writeBox(Boxes.EndOfFrame())
     updateEpisodeInfo()
     genSnapshotIndexBox()
-    writeEOF()
-
+    writeBox(Boxes.EndOfFile())
+    updateBoxPositionBox()
     //wait till all write finished.
     boxWriter.close()
   }
