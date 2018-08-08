@@ -1,7 +1,8 @@
 
 
 lazy val baseSettings = Seq(
-  version := "0.0.1-SNAPSHOT",
+  //version := "0.0.1-SNAPSHOT",
+  version := "0.0.1-alpha",
   scalaVersion := "2.12.6",
   organization := "org.seekloud",
   scalacOptions ++= Seq(
@@ -61,7 +62,7 @@ lazy val publishSettings = Seq(
       </license>
     </licenses>
     <scm>
-      <url>https://github.com/seekloud/essf.git</url>
+      <url>https://github.com/seekloud/essf</url>
       <connection>scm:git@github.com:seekloud/essf.git</connection>
     </scm>
     <developers>
@@ -69,6 +70,8 @@ lazy val publishSettings = Seq(
         <id>sometao</id>
         <name>Tao Zhang</name>
         <url>https://github.com/sometao</url>
+        <organization>seekloud</organization>
+        <organizationUrl>https://github.com/seekloud</organizationUrl>
       </developer>
     </developers>
 )
