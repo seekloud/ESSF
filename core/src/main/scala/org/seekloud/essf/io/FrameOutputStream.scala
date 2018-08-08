@@ -36,7 +36,8 @@ class FrameOutputStream(
   }
 
   private[this] def updateEpisodeInfo(): Unit = {
-    val box = Boxes.EpisodeInform(currentFrame + 1, snapShotIndexSeq.size)
+    //println(s"update frameCount=$currentFrame")
+    val box = Boxes.EpisodeInform(currentFrame, snapShotIndexSeq.size)
     updateBox(box)
   }
 
@@ -92,6 +93,7 @@ class FrameOutputStream(
 
   def writeFrame(eventsData: Array[Byte], stateData: Option[Array[Byte]] = None): Int = {
     val frameNum = currentFrame
+    //println(s"write frame: frameNum=$frameNum, after=${frameNum + 1}")
     if (stateData.isDefined) {
       snapShotIndexSeq ::= (frameNum, filePosition)
     }
@@ -102,6 +104,7 @@ class FrameOutputStream(
 
   def writeEmptyFrame(): Int = {
     val frameNum = currentFrame
+    //println(s"write empty frame: frameNum=$frameNum, after=${frameNum + 1}")
     writeBox(Boxes.EmptyFrame())
     currentFrame += 1
     frameNum

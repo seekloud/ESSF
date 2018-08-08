@@ -195,12 +195,11 @@ object Boxes {
 
 
   final case class SimulatorMetadata(metadata: Array[Byte]) extends Box(BoxType.simulatorMetadata) {
-    assert(metadata.length < Short.MaxValue)
 
-    override lazy val payloadSize: Int = 2 + metadata.length
+    override lazy val payloadSize: Int = 4 + metadata.length
 
     override def writePayload(buf: ByteBuffer): ByteBuffer = {
-      buf.putShort(metadata.length.toByte)
+      buf.putInt(metadata.length)
       buf.put(metadata)
       buf
     }
@@ -216,7 +215,7 @@ object Boxes {
 
   object SimulatorMetadata {
     def readFromBuffer(buf: ByteBuffer) = Try {
-      val len = buf.getShort()
+      val len = buf.getInt()
       val metadata = new Array[Byte](len)
       buf.get(metadata)
       SimulatorMetadata(metadata)
@@ -233,7 +232,7 @@ object Boxes {
 
     override def writePayload(buf: ByteBuffer): ByteBuffer = {
       buf.putInt(frameIndex)
-      buf.putInt(eventsData.length.toByte)
+      buf.putInt(eventsData.length)
       buf.put(eventsData)
       currState match {
         case Some(arr) =>

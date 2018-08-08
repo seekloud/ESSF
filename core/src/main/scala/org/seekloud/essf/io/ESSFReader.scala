@@ -92,6 +92,7 @@ object ESSFReader {
     val tmpArr = new Array[Byte](4)
     hBuff.get(tmpArr)
     val boxType = new String(tmpArr, "utf-8")
+//    println(s"readHead boxType: $boxType")
     var payloadSize = boxSize - 6
     if (boxSize == 1) {
       hBuff.clear()

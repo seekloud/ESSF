@@ -23,7 +23,7 @@ class FrameInputStream(file: String) {
   private var framePosition = 0
 
 
-  def init(): SimulatorInfo = {
+  def init(): (SimulatorInfo, EpisodeInfo) = {
     nextBox = Some(boxReader.get()) //First box must be exist.
     val fileMeta = readBox().asInstanceOf[Boxes.FileMeta]
     val boxPositionBox = readBox().asInstanceOf[Boxes.BoxPosition]
@@ -42,13 +42,16 @@ class FrameInputStream(file: String) {
       epInformation.frameCount,
       epInformation.snapshotCount,
       fileMeta.createTime)
+
+    //println(s"init input: frameCount=${epInformation.frameCount}")
+
     epInfo = Some(info)
-    SimulatorInfo(
+    (SimulatorInfo(
       simulatorInform.id,
       simulatorInform.version,
       simulatorMeta.metadata,
       initState.stateData
-    )
+    ), info)
   }
 
   private[this] def readBox(): Box = {
@@ -63,6 +66,10 @@ class FrameInputStream(file: String) {
 
   private[this] def readBox(pos: Long): Box = {
     boxReader.get(pos)
+  }
+
+  def hasMoreFrame: Boolean = {
+    framePosition < epInfo.get.frameCount
   }
 
 
@@ -83,7 +90,10 @@ class FrameInputStream(file: String) {
       case Some(Boxes.EmptyFrame()) =>
         updatePosition()
         Some(FrameData(curr, Utils.EmptyByteArray, None))
-      case _ => None
+      case _ =>
+        //println(s"!!! no more frame framePosition=$framePosition vs epInfo.get.frameCount=${epInfo.get.frameCount}")
+        framePosition = epInfo.get.frameCount
+        None
     }
 
   }

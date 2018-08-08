@@ -14,7 +14,7 @@ abstract class Box(final val boxType: String) {
   lazy val size: Int = {
     val len = 6 + payloadSize
     if (len > Short.MaxValue) {
-      len + 2
+      len + 4
     } else len
   }
 

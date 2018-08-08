@@ -28,15 +28,12 @@ lazy val core =
     )
 
 
-
-
 lazy val example = project.in(file("example"))
   .dependsOn(core)
   .settings(
     name := "example",
     baseSettings
   )
-
 
 
 lazy val publishSettings = Seq(

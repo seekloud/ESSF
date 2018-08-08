@@ -24,7 +24,22 @@ package object io {
     initState: Array[Byte]
   )
 
-  final case class FrameData(frameIndex: Int, eventsData: Array[Byte], stateData: Option[Array[Byte]])
+  final case class FrameData(frameIndex: Int, eventsData: Array[Byte], stateData: Option[Array[Byte]]){
+    override def equals(obj: scala.Any): Boolean = {
+      obj match {
+        case FrameData(idx, ev, st) =>
+          if(idx == frameIndex && Utils.arrayEquals(ev, eventsData)){
+            (stateData, st) match {
+              case (Some(s1), Some(s2)) => Utils.arrayEquals(s1, s2)
+              case (None, None) => true
+              case _ => false
+            }
+          } else false
+        case _ => false
+      }
+    }
+
+  }
 
 
   class EssfIOException(msg: String = "") extends Exception {

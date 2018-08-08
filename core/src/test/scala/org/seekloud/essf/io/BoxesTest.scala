@@ -86,23 +86,51 @@ class BoxesTest extends UnitSpec {
 
 
   "SimulatorMetadata Box" should "write and read keeping the same" in {
-    val targetBox = Boxes.SimulatorMetadata("tmpdata".getBytes("utf-8"))
+    val data = rdm.nextString(1027).getBytes()
+    val targetBox = Boxes.SimulatorMetadata(data)
     writeAndRead(targetBox, tmpFile(targetBox.boxType + ".essf"))
   }
 
 
+  it should "write and read keeping the same with no data" in {
+    val data = new Array[Byte](0)
+    val targetBox = Boxes.SimulatorMetadata(data)
+    writeAndRead(targetBox, tmpFile(targetBox.boxType + "1.essf"))
+  }
+
+
+  it should "write and read keeping the same with large data" in {
+    val data = rdm.nextString(1027000).getBytes()
+    val targetBox = Boxes.SimulatorMetadata(data)
+    writeAndRead(targetBox, tmpFile(targetBox.boxType + "2.essf"))
+  }
+
+
   "SimulatorFrame Box" should "write and read keeping the same" in {
-    val data1 = "tmpdataSimulatorInform".getBytes("utf-8")
-    val data2 = "tmpdataSimulatorInform".getBytes("utf-8")
+    val data1 = rdm.nextString(1027).getBytes()
     val targetBox = Boxes.SimulatorFrame(4567, data1, None)
     writeAndRead(targetBox, tmpFile(targetBox.boxType + ".essf"))
   }
 
   it should "write and read keeping the same with snapshot" in {
-    val data1 = "tmpdataSimulatorInform".getBytes("utf-8")
-    val data2 = "tmpdataSimulatorInform".getBytes("utf-8")
+    val data1 = rdm.nextString(107).getBytes()
+    val data2 = rdm.nextString(219).getBytes()
     val targetBox = Boxes.SimulatorFrame(14567, data1, Some(data2))
-    writeAndRead(targetBox, tmpFile(targetBox.boxType + ".1essf"))
+    writeAndRead(targetBox, tmpFile(targetBox.boxType + "1.essf"))
+  }
+
+  it should "write and read keeping the same with large data" in {
+    val data1 = rdm.nextString(1027000).getBytes()
+    val data2 = rdm.nextString(2019000).getBytes()
+    val targetBox = Boxes.SimulatorFrame(14567, data1, Some(data2))
+    writeAndRead(targetBox, tmpFile(targetBox.boxType + "2.essf"))
+  }
+
+  it should "write and read keeping the same with no data" in {
+    val data1 = new Array[Byte](0)
+    val data2 = new Array[Byte](0)
+    val targetBox = Boxes.SimulatorFrame(14567, data1, Some(data2))
+    writeAndRead(targetBox, tmpFile(targetBox.boxType + "3.essf"))
   }
 
 

@@ -2,6 +2,8 @@ package org.seekloud.essf.test
 
 import org.scalatest._
 
+import scala.util.Random
+
 
 /**
   * User: Taoz
@@ -13,4 +15,9 @@ abstract class UnitSpec
     with Matchers
     with OptionValues
     with Inside
-    with Inspectors
+    with Inspectors {
+
+
+  val rdm = new Random()
+
+}
