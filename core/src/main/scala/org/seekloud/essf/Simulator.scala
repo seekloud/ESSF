@@ -23,6 +23,17 @@ object Simulator {
 
   def main(args: Array[String]): Unit = {
 
+    val arr1 = Array(1,2,3,4,5)
+    val arr2 = Array(1,2,3,4,5)
+
+    println(Utils.arrayEquals(arr1, arr2))
+
+
+  }
+
+
+  def main2(args: Array[String]): Unit = {
+
     val map = new java.util.TreeMap[Int, Long]()
 
     map.put(10, 11l)

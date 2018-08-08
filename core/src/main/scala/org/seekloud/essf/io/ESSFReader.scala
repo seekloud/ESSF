@@ -51,7 +51,7 @@ private[essf] class ESSFReader(file: String) {
 
   private[this] def decodeBox(boxType: String, buf: ByteBuffer): Box = {
     val boxTry: Try[Box] = boxType match {
-      case BoxType.`fileMeta` => Boxes.EpisodeInform.readFromBuffer(buf)
+      case BoxType.`fileMeta` => Boxes.FileMeta.readFromBuffer(buf)
       case BoxType.boxPosition => Boxes.BoxPosition.readFromBuffer(buf)
       case BoxType.episodeInform => Boxes.EpisodeInform.readFromBuffer(buf)
       case BoxType.episodeStatus => Boxes.EpisodeStatus.readFromBuffer(buf)

@@ -2,6 +2,8 @@ package org.seekloud.essf.box
 
 import java.nio.ByteBuffer
 
+import org.seekloud.essf.Utils
+
 import scala.util.Try
 
 /**
@@ -48,6 +50,7 @@ object Boxes {
     snapshotPos: Long
   ) extends Box(BoxType.boxPosition) {
     override lazy val payloadSize: Int = 8
+
     override def writePayload(buf: ByteBuffer): ByteBuffer = {
       buf.putLong(snapshotPos)
       buf
@@ -65,6 +68,7 @@ object Boxes {
   final case class EpisodeInform(frameCount: Int, snapshotCount: Int) extends Box(BoxType.episodeInform) {
 
     override lazy val payloadSize: Int = 4 + 4
+
     override def writePayload(buf: ByteBuffer): ByteBuffer = {
       buf.putInt(frameCount)
       buf.putInt(snapshotCount)
@@ -125,7 +129,7 @@ object Boxes {
 
   object EpisodeStatus {
     def readFromBuffer(buf: ByteBuffer) = Try {
-      val data = buf.get()
+      val data = buf.getInt()
       EpisodeStatus(data)
     }
   }
@@ -133,6 +137,7 @@ object Boxes {
 
   final case class EndOfFile() extends Box(BoxType.endOfFile) {
     override lazy val payloadSize: Int = 0
+
     override def writePayload(buf: ByteBuffer): ByteBuffer = {
       buf
     }
@@ -199,6 +204,14 @@ object Boxes {
       buf.put(metadata)
       buf
     }
+
+    override def equals(obj: scala.Any): Boolean = {
+      obj match {
+        case SimulatorMetadata(data) =>
+          Utils.arrayEquals(data, metadata)
+        case _ => false
+      }
+    }
   }
 
   object SimulatorMetadata {
@@ -214,7 +227,7 @@ object Boxes {
   final case class SimulatorFrame(
     frameIndex: Int,
     eventsData: Array[Byte],
-    currState: Option[Array[Byte]]
+    currState: Option[Array[Byte]] = None
   ) extends Box(BoxType.simulatorFrame) {
     override lazy val payloadSize: Int = 4 + 4 + eventsData.length + 1 + currState.map(_.length + 4).getOrElse(0)
 
@@ -231,6 +244,22 @@ object Boxes {
           buf.put(0.toByte)
       }
       buf
+    }
+
+    override def equals(obj: scala.Any): Boolean = {
+      obj match {
+        case SimulatorFrame(oIdx, oEvents, oSnapshot) =>
+          if (oIdx == frameIndex) {
+            if (Utils.arrayEquals(eventsData, oEvents)) {
+              (currState, oSnapshot) match {
+                case (None, None) => true
+                case (Some(d1), Some(d2)) => Utils.arrayEquals(d1, d2)
+                case _ => false
+              }
+            } else false
+          } else false
+        case _ => false
+      }
     }
   }
 
@@ -255,9 +284,9 @@ object Boxes {
   }
 
 
-
   final case class EndOfFrame() extends Box(BoxType.endOfFrame) {
     override lazy val payloadSize: Int = 0
+
     override def writePayload(buf: ByteBuffer): ByteBuffer = {
       buf
     }
