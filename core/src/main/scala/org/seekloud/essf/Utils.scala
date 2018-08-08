@@ -22,4 +22,6 @@ object Utils {
     } else false
   }
 
+  val EmptyByteArray = new Array[Byte](0)
+
 }

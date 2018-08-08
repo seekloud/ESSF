@@ -23,14 +23,15 @@ class FrameOutputStream(
   def init(
     simulatorId: String,
     dataVersion: String,
-    frameMilliSeconds: Short,
-    simulatorMetadata: Array[Byte]
+    simulatorMetadata: Array[Byte],
+    initState: Array[Byte]
   ): FrameOutputStream = {
     writeBox(Boxes.FileMeta(IO_VERSION, System.currentTimeMillis()))
     writeBox(Boxes.BoxPosition(-1l), indexIt = true)
     writeBox(Boxes.EpisodeInform(0, 0), indexIt = true)
     writeBox(Boxes.SimulatorInform(simulatorId, dataVersion))
     writeBox(Boxes.SimulatorMetadata(simulatorMetadata))
+    writeBox(Boxes.InitState(initState))
     this
   }
 
@@ -89,12 +90,19 @@ class FrameOutputStream(
   }
 
 
-  def writeFrame(eventsData: Array[Byte], stateData: Option[Array[Byte]]): Int = {
+  def writeFrame(eventsData: Array[Byte], stateData: Option[Array[Byte]] = None): Int = {
     val frameNum = currentFrame
     if (stateData.isDefined) {
       snapShotIndexSeq ::= (frameNum, filePosition)
     }
     writeBox(Boxes.SimulatorFrame(frameNum, eventsData, stateData))
+    currentFrame += 1
+    frameNum
+  }
+
+  def writeEmptyFrame(): Int = {
+    val frameNum = currentFrame
+    writeBox(Boxes.EmptyFrame())
     currentFrame += 1
     frameNum
   }

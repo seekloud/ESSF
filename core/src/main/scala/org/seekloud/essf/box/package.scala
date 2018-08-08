@@ -23,6 +23,8 @@ package object box {
     val simulatorInform = "smli"
     val simulatorMetadata = "smlm"
     val simulatorFrame = "slfr"
+    val initState = "itst"
+    val emptyFrame = "emfr"
     val endOfFrame = "eofr"
   }
 

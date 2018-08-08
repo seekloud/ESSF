@@ -1,11 +1,11 @@
 package org.seekloud.essf.io
 
+import org.seekloud.essf.Utils
 import org.seekloud.essf.box._
 
 import scala.collection.mutable
 import scala.collection.immutable
 import scala.util.Random
-
 import org.seekloud.essf.box.Boxes
 
 /**
@@ -20,6 +20,7 @@ class FrameInputStream(file: String) {
   private var epInfo: Option[EpisodeInfo] = None
   private var nextBox: Option[Box] = None
   private val snapshotIndexMap: java.util.TreeMap[Int, Long] = new java.util.TreeMap[Int, Long]()
+  private var framePosition = 0
 
 
   def init(): SimulatorInfo = {
@@ -29,6 +30,7 @@ class FrameInputStream(file: String) {
     val epInformation = readBox().asInstanceOf[Boxes.EpisodeInform]
     val simulatorInform = readBox().asInstanceOf[Boxes.SimulatorInform]
     val simulatorMeta = readBox().asInstanceOf[Boxes.SimulatorMetadata]
+    val initState = readBox().asInstanceOf[Boxes.InitState]
 
     val snapshotIndexBox = readBox(boxPositionBox.snapshotPos).asInstanceOf[Boxes.SnapshotPosition]
     snapshotIndexBox.snapshotIndex.foreach {
@@ -41,10 +43,12 @@ class FrameInputStream(file: String) {
       epInformation.snapshotCount,
       fileMeta.createTime)
     epInfo = Some(info)
-    if (nextBox.get.asInstanceOf[Boxes.SimulatorFrame].currState.isEmpty) {
-      throw new EssfIOException("First SimulatorFrameBox's state must be defined.")
-    }
-    SimulatorInfo(simulatorInform.id, simulatorInform.version, simulatorMeta.metadata)
+    SimulatorInfo(
+      simulatorInform.id,
+      simulatorInform.version,
+      simulatorMeta.metadata,
+      initState.stateData
+    )
   }
 
   private[this] def readBox(): Box = {
@@ -63,13 +67,25 @@ class FrameInputStream(file: String) {
 
 
   def readFrame(): Option[FrameData] = {
+    val curr = framePosition
+
+    @inline
+    def updatePosition(): Unit = {
+      readBox() // update, important
+      framePosition += 1
+    }
+
     nextBox match {
-      case Some(Boxes.SimulatorFrame(frameIndex, eData, sData)) =>
-        readBox() // update, important
-      val frameData = FrameData(frameIndex, eData, sData)
-        Some(frameData)
+      case Some(Boxes.SimulatorFrame(idx, eData, sData)) =>
+        assert(idx == framePosition, s"frame position mismatch: $idx != $framePosition")
+        updatePosition()
+        Some(FrameData(curr, eData, sData))
+      case Some(Boxes.EmptyFrame()) =>
+        updatePosition()
+        Some(FrameData(curr, Utils.EmptyByteArray, None))
       case _ => None
     }
+
   }
 
   def gotoSnapshot(idx: Int): Int = {
@@ -79,11 +95,12 @@ class FrameInputStream(file: String) {
       } else {
         snapshotIndexMap.floorEntry(idx)
       }
-    val floorKey = entry.getKey
+    val frameIdx = entry.getKey
+    framePosition = frameIdx
     position = entry.getValue
     boxReader.position(position)
     nextBox = Some(boxReader.get()) //First box must be exist.
-    floorKey
+    frameIdx
   }
 
   def gotoSnapshotByRatio(ratio: Double): Int = {
@@ -91,6 +108,10 @@ class FrameInputStream(file: String) {
     assert(ratio <= 1.000000000001)
     val idx = epInfo.get.frameCount * ratio
     gotoSnapshot(Math.ceil(idx).toInt)
+  }
+
+  def close(): Unit ={
+    boxReader.close()
   }
 
 

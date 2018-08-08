@@ -284,6 +284,42 @@ object Boxes {
   }
 
 
+  final case class InitState(
+    stateData: Array[Byte]
+  ) extends Box(BoxType.initState) {
+    override lazy val payloadSize: Int = 4 + stateData.length
+
+    override def writePayload(buf: ByteBuffer): ByteBuffer = {
+      buf.putInt(stateData.length)
+      buf.put(stateData)
+      buf
+    }
+  }
+
+  object InitState {
+    def readFromBuffer(buf: ByteBuffer) = Try {
+      val len = buf.getInt()
+      val arr = new Array[Byte](len)
+      buf.get(arr)
+      InitState(arr)
+    }
+  }
+
+  final case class EmptyFrame() extends Box(BoxType.emptyFrame) {
+    override lazy val payloadSize: Int = 0
+
+    override def writePayload(buf: ByteBuffer): ByteBuffer = {
+      buf
+    }
+  }
+
+  object EmptyFrame {
+    def readFromBuffer(buf: ByteBuffer) = Try {
+      EmptyFrame()
+    }
+  }
+
+
   final case class EndOfFrame() extends Box(BoxType.endOfFrame) {
     override lazy val payloadSize: Int = 0
 
