@@ -47,20 +47,45 @@ object Boxes {
 
 
   final case class BoxPosition(
+    boxPositionPos: Long,
+    episodeInformPos: Long,
+    episodeStatusPos: Long,
+    endOfFramePos: Long,
     snapshotPos: Long
   ) extends Box(BoxType.boxPosition) {
-    override lazy val payloadSize: Int = 8
+    override lazy val payloadSize: Int = 40
 
     override def writePayload(buf: ByteBuffer): ByteBuffer = {
+      buf.putLong(boxPositionPos)
+      buf.putLong(episodeInformPos)
+      buf.putLong(episodeStatusPos)
+      buf.putLong(endOfFramePos)
       buf.putLong(snapshotPos)
       buf
     }
+
+    lazy val asMap = Map(
+      BoxType.boxPosition -> boxPositionPos,
+      BoxType.episodeInform -> episodeInformPos,
+      BoxType.episodeStatus -> episodeStatusPos,
+      BoxType.endOfFrame -> endOfFramePos,
+      BoxType.snapshotPosition -> snapshotPos
+    )
   }
 
   object BoxPosition {
     def readFromBuffer(buf: ByteBuffer): Try[BoxPosition] = Try {
+      val boxPositionPos = buf.getLong
+      val episodeInformPos = buf.getLong
+      val episodeStatusPos = buf.getLong
+      val endOfFramePos = buf.getLong
       val stateIndexPosition = buf.getLong
-      BoxPosition(stateIndexPosition)
+      BoxPosition(
+        boxPositionPos,
+        episodeInformPos,
+        episodeStatusPos,
+        endOfFramePos,
+        stateIndexPosition)
     }
   }
 
@@ -116,12 +141,18 @@ object Boxes {
   }
 
 
-  final case class EpisodeStatus(data: Int) extends Box(BoxType.episodeStatus) {
+  final case class EpisodeStatus(
+    isFinished: Boolean
+  ) extends Box(BoxType.episodeStatus) {
 
-    override lazy val payloadSize: Int = 4
+    override lazy val payloadSize: Int = 1
 
     override def writePayload(buf: ByteBuffer): ByteBuffer = {
-      buf.putInt(data)
+      if (isFinished) {
+        buf.put(1.toByte)
+      } else {
+        buf.put(0.toByte)
+      }
       buf
     }
 
@@ -129,8 +160,8 @@ object Boxes {
 
   object EpisodeStatus {
     def readFromBuffer(buf: ByteBuffer) = Try {
-      val data = buf.getInt()
-      EpisodeStatus(data)
+      val isFinished = buf.get() == 1
+      EpisodeStatus(isFinished)
     }
   }
 
@@ -306,6 +337,7 @@ object Boxes {
 
   final case class EmptyFrame() extends Box(BoxType.emptyFrame) {
     override lazy val payloadSize: Int = 0
+
     override def writePayload(buf: ByteBuffer): ByteBuffer = {
       buf
     }

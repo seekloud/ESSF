@@ -1,7 +1,8 @@
 package org.seekloud.essf.io
 
-import java.io.{File, FileOutputStream}
+import java.io.{File, FileOutputStream, RandomAccessFile}
 import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
 
 import org.seekloud.essf.box.Box
 
@@ -15,9 +16,15 @@ private[essf] class ESSFWriter(file: String) {
   import ESSFWriter.writeHead
 
   final val DEFAULT_BUFFER_SIZE = 32 * 1024
-  private val fc = new FileOutputStream(new File(file)).getChannel
+  private val fc = new RandomAccessFile(new File(file), "rw").getChannel
+
+  //private val fc = new FileOutputStream(new File(file)).getChannel
   private val defaultBuffer = ByteBuffer.allocateDirect(DEFAULT_BUFFER_SIZE)
 
+
+  def position(pos: Long): Unit = {
+    fc.position(pos)
+  }
 
   def put(box: Box): ESSFWriter = {
     val boxSize = box.size

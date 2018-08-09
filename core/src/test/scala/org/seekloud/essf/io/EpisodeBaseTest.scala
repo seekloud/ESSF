@@ -18,7 +18,7 @@ class EpisodeBaseTest extends UnitSpec {
 
 
   def tmpFile(file: String): String = {
-    testFile("episodeTest", file)
+    testFile("episodeBase", file)
   }
 
 

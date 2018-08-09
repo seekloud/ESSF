@@ -9,13 +9,13 @@ import scala.collection.mutable.ArrayBuffer
   * Date: 8/9/2018
   * Time: 10:59 AM
   */
-class EpisodeAdvanceTest extends UnitSpec {
+class EpisodeGotoTest extends UnitSpec {
 
   import TestUtils._
 
 
   def tmpFile(file: String): String = {
-    testFile("episodeAdvanceTest", file)
+    testFile("episodeGotoTest", file)
   }
 
 
@@ -52,7 +52,8 @@ class EpisodeAdvanceTest extends UnitSpec {
     val (input, epInfo) = getInputStream(file)
     val arrayBuffer = new ArrayBuffer[FrameData]()
     snapshotMarks.foreach { f =>
-      input.gotoSnapshot(f.frameIndex)
+      val tmpIndex = input.gotoSnapshot(f.frameIndex)
+//      println(s"""go to ${f.frameIndex}, rst=$tmpIndex""")
       arrayBuffer.append(input.readFrame().get)
     }
 
@@ -79,7 +80,7 @@ class EpisodeAdvanceTest extends UnitSpec {
 
 
   it can "work with no snapshot" in {
-    val file = tmpFile("gotoSnapshot1.essf")
+    val file = tmpFile("gotoSnapshot2.essf")
 
     val output = getOutputStream(file)
 
@@ -177,7 +178,7 @@ class EpisodeAdvanceTest extends UnitSpec {
 
 
   it can "with frame position work correctly" in {
-    val file = tmpFile("gotoSnapshot1.essf")
+    val file = tmpFile("gotoSnapshot3.essf")
 
     val output = getOutputStream(file)
 

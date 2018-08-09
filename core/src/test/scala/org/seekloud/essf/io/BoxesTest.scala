@@ -48,13 +48,13 @@ class BoxesTest extends UnitSpec {
 
 
   "BoxPosition Box" should "write and read keeping the same" in {
-    val targetBox = Boxes.BoxPosition(12345678901234l)
+    val targetBox = Boxes.BoxPosition(111l, 222l, 555l, 12345678901234l, 1234566l)
     writeAndRead(targetBox, tmpFile(targetBox.boxType + ".essf"))
   }
 
 
   "EpisodeStatus Box" should "write and read keeping the same" in {
-    val targetBox = Boxes.EpisodeStatus(1234)
+    val targetBox = Boxes.EpisodeStatus(true)
     writeAndRead(targetBox, tmpFile(targetBox.boxType + ".essf"))
   }
 

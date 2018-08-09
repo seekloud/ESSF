@@ -18,7 +18,7 @@ class FrameOutputStream(
   private[this] var currentFrame = 0
   private[this] var filePosition = 0l
   private[this] var snapShotIndexSeq = List.empty[(Int, Long)]
-  private[this] val boxWriter: ESSFWriter = new ESSFWriter(targetFile)
+  private[this] var boxWriter: Option[ESSFWriter] = None
 
   def init(
     simulatorId: String,
@@ -26,13 +26,90 @@ class FrameOutputStream(
     simulatorMetadata: Array[Byte],
     initState: Array[Byte]
   ): FrameOutputStream = {
+    boxWriter = Some(new ESSFWriter(targetFile))
     writeBox(Boxes.FileMeta(IO_VERSION, System.currentTimeMillis()))
-    writeBox(Boxes.BoxPosition(-1l), indexIt = true)
+    writeBox(Boxes.BoxPosition(filePosition, -1l, -1l, -1l, -1l), indexIt = true)
     writeBox(Boxes.EpisodeInform(0, 0), indexIt = true)
+    writeBox(Boxes.EpisodeStatus(false), indexIt = true)
     writeBox(Boxes.SimulatorInform(simulatorId, dataVersion))
     writeBox(Boxes.SimulatorMetadata(simulatorMetadata))
     writeBox(Boxes.InitState(initState))
     this
+  }
+
+  def fix(): Unit = {
+    val input = new FrameInputStream(targetFile)
+    val epInfos = input.init(withSnapshot = false)
+    //assert(!epInfos.isFinished, "this file need no fix.")
+
+    input.getBoxPositions.asMap.map {
+      case (k, v) => boxPositions.put(k, v)
+    }
+    snapShotIndexSeq = input.getSnapshotIndexes.reverse
+
+    var reachToEnd = false
+    while (!reachToEnd) {
+      try {
+        input.readFrame() match {
+          case Some(FrameData(_, eventsData, stateData)) =>
+            if (stateData.isDefined) {
+              snapShotIndexSeq ::= (currentFrame, filePosition)
+            }
+            filePosition = input.getFilePosition
+            currentFrame = input.getFramePosition
+          case None =>
+            reachToEnd = true
+        }
+      } catch {
+        case e: Exception =>
+          input.getNextBox match {
+            case Some(box) => box match {
+              case b : Boxes.SimulatorFrame =>
+                filePosition += b.size
+                currentFrame += 1
+              case _ =>
+            }
+            case None =>
+          }
+          println(s"fix [$targetFile] got an EXPECTED exception[${e.getClass}]: ${e.getMessage}")
+          reachToEnd = true
+      }
+    }
+    try {
+      input.close()
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
+
+    boxWriter = Some(new ESSFWriter(targetFile))
+    boxWriter.get.position(filePosition)
+    finish()
+  }
+
+
+  def continue(
+    simulatorId: String,
+    dataVersion: String,
+    eventsData: Array[Byte],
+    stateData: Array[Byte]
+  ): Int = {
+    val input = new FrameInputStream(targetFile)
+    val epInfos = input.init()
+    input.close()
+
+    snapShotIndexSeq = input.getSnapshotIndexes.reverse
+    currentFrame = epInfos.frameCount
+    filePosition = input.getEndOfFramePosition
+    boxWriter = Some(new ESSFWriter(targetFile))
+    boxWriter.get.position(filePosition)
+
+    input.getBoxPositions.asMap.map {
+      case (k, v) => boxPositions.put(k, v)
+    }
+
+    updateEpisodeStatus(false)
+    writeFrame(eventsData, Some(stateData))
   }
 
   private[this] def updateEpisodeInfo(): Unit = {
@@ -41,8 +118,19 @@ class FrameOutputStream(
     updateBox(box)
   }
 
+  private[this] def updateEpisodeStatus(isFinish: Boolean): Unit = {
+    val box = Boxes.EpisodeStatus(isFinish)
+    updateBox(box)
+  }
+
   private[this] def updateBoxPositionBox(): Unit = {
-    val box = Boxes.BoxPosition(boxPositions(BoxType.snapshotPosition))
+    val box = Boxes.BoxPosition(
+      boxPositions(BoxType.boxPosition),
+      boxPositions(BoxType.episodeInform),
+      boxPositions(BoxType.episodeStatus),
+      boxPositions(BoxType.endOfFrame),
+      boxPositions(BoxType.snapshotPosition)
+    )
     updateBox(box)
   }
 
@@ -65,6 +153,7 @@ class FrameOutputStream(
     val canBeUpdated = box match {
       case _: Boxes.EpisodeInform => true
       case _: Boxes.BoxPosition => true
+      case _: Boxes.EpisodeStatus => true
       case _ => false
     }
     if (canBeUpdated) {
@@ -84,9 +173,9 @@ class FrameOutputStream(
 
     //TODO use a queue in other thread.
     if (position < 0) {
-      boxWriter.put(box)
+      boxWriter.get.put(box)
     } else {
-      boxWriter.put(box, position)
+      boxWriter.get.put(box, position)
     }
   }
 
@@ -102,6 +191,10 @@ class FrameOutputStream(
     frameNum
   }
 
+  def writeConnectFrame(eventsData: Array[Byte], stateData: Array[Byte]): Int = {
+    writeFrame(eventsData, Some(stateData))
+  }
+
   def writeEmptyFrame(): Int = {
     val frameNum = currentFrame
     //println(s"write empty frame: frameNum=$frameNum, after=${frameNum + 1}")
@@ -112,13 +205,14 @@ class FrameOutputStream(
 
 
   def finish(): Unit = {
-    writeBox(Boxes.EndOfFrame())
+    writeBox(Boxes.EndOfFrame(), indexIt = true)
     updateEpisodeInfo()
     genSnapshotIndexBox()
     writeBox(Boxes.EndOfFile())
     updateBoxPositionBox()
+    updateEpisodeStatus(isFinish = true)
     //wait till all write finished.
-    boxWriter.close()
+    boxWriter.foreach(_.close())
   }
 
 }

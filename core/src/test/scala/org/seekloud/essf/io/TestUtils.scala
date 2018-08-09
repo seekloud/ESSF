@@ -1,5 +1,8 @@
 package org.seekloud.essf.io
 
+import java.io.{File, FileInputStream, FileOutputStream}
+import java.nio.ByteBuffer
+
 import scala.collection.immutable
 import scala.util.Random
 
@@ -56,6 +59,42 @@ object TestUtils {
     output.init(simulatorId, dataVersion, metadata, initState)
     output
   }
+
+  def copyPartFile(src: String, dst: String, length: Long): Unit = {
+    val f1 = new FileInputStream(new File(src)).getChannel
+    val f2 = new FileOutputStream(new File(dst)).getChannel
+
+    val bufSize = 32 * 1024
+    val buf = ByteBuffer.allocateDirect(bufSize)
+    assert(f1.size() > length)
+    var count = 0
+    var remaind = length
+    while (remaind > 0) {
+      if(remaind > bufSize) {
+        buf.clear()
+        f1.read(buf)
+        buf.flip()
+        val n = f2.write(buf)
+        remaind -= n
+        println(s"remaind: $remaind")
+      } else {
+        buf.clear()
+        buf.limit(remaind.toInt)
+        f1.read(buf)
+        buf.flip()
+        val n = f2.write(buf)
+        remaind -= n
+        println(s"last remaind: $remaind")
+      }
+    }
+    f1.close()
+    f2.close()
+  }
+
+
+
+
+
 
 
   def getInputStream(file: String): (FrameInputStream, EpisodeInfo) = {

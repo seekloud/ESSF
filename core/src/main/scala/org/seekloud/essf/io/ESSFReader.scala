@@ -59,7 +59,6 @@ private[essf] class ESSFReader(file: String) {
       case BoxType.`endOfFile` => Boxes.EndOfFile.readFromBuffer(buf)
       case BoxType.`initState` => Boxes.InitState.readFromBuffer(buf)
       case BoxType.`emptyFrame` => Boxes.EmptyFrame.readFromBuffer(buf)
-
       case BoxType.`simulatorInform` => Boxes.SimulatorInform.readFromBuffer(buf)
       case BoxType.`simulatorMetadata` => Boxes.SimulatorMetadata.readFromBuffer(buf)
       case BoxType.`simulatorFrame` => Boxes.SimulatorFrame.readFromBuffer(buf)

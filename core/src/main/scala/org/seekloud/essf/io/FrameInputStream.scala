@@ -3,12 +3,8 @@ package org.seekloud.essf.io
 import java.util.{Map, NoSuchElementException}
 
 import org.seekloud.essf.Utils
-import org.seekloud.essf.box._
-
-import scala.collection.mutable
-import scala.collection.immutable
-import scala.util.Random
-import org.seekloud.essf.box.Boxes
+import org.seekloud.essf.box.Boxes.BoxPosition
+import org.seekloud.essf.box.{Boxes, _}
 
 /**
   * User: Taoz
@@ -23,6 +19,21 @@ class FrameInputStream(file: String) {
   private var nextBox: Option[Box] = None
   private val snapshotIndexMap: java.util.TreeMap[Int, Long] = new java.util.TreeMap[Int, Long]()
   private var framePosition = 0
+  private var boxPositions: Option[BoxPosition] = None
+
+
+  def getSnapshotIndexes: List[(Int, Long)] = {
+    import collection.JavaConverters._
+    snapshotIndexMap.asScala.iterator.toList
+  }
+
+  def getEndOfFramePosition: Long = boxPositions.get.endOfFramePos
+
+  def getBoxPositions: BoxPosition = boxPositions.get
+
+  def getFilePosition: Long = position
+
+  def getFramePosition: Int = framePosition
 
 
   def reset(): EpisodeInfo = {
@@ -32,29 +43,38 @@ class FrameInputStream(file: String) {
     init()
   }
 
-  def init(): EpisodeInfo = {
+
+  def init(withSnapshot: Boolean = true): EpisodeInfo = {
     nextBox = Some(boxReader.get()) //First box must be exist.
     val fileMeta = readBox().asInstanceOf[Boxes.FileMeta]
-    val boxPositionBox = readBox().asInstanceOf[Boxes.BoxPosition]
+    boxPositions = Some(readBox().asInstanceOf[Boxes.BoxPosition])
     val epInformation = readBox().asInstanceOf[Boxes.EpisodeInform]
+    val epStatus = readBox().asInstanceOf[Boxes.EpisodeStatus]
     val simulatorInform = readBox().asInstanceOf[Boxes.SimulatorInform]
     val simulatorMeta = readBox().asInstanceOf[Boxes.SimulatorMetadata]
     val initState = readBox().asInstanceOf[Boxes.InitState]
 
-    val snapshotIndexBox = readBox(boxPositionBox.snapshotPos).asInstanceOf[Boxes.SnapshotPosition]
-    snapshotIndexBox.snapshotIndex.foreach {
-      case (k, v) => snapshotIndexMap.put(k, v)
+    if (withSnapshot) {
+      val snapshotIndexBox = readBox(boxPositions.get.snapshotPos).asInstanceOf[Boxes.SnapshotPosition]
+      snapshotIndexBox.snapshotIndex.foreach {
+        case (k, v) => snapshotIndexMap.put(k, v)
+      }
     }
-    val info = EpisodeInfo(
-      fileMeta.version,
+
+    val info = EpisodeInfo(fileMeta.version,
       epInformation.frameCount,
       epInformation.snapshotCount,
       fileMeta.createTime,
+      epStatus.isFinished,
       simulatorInform.id,
       simulatorInform.version,
       simulatorMeta.metadata,
-      initState.stateData
-    )
+      initState.stateData)
+
+    if (withSnapshot && !epStatus.isFinished) {
+      //warming here: "this file is incomplete, please fix it first."
+      boxReader.close()
+    }
 
     //println(s"init input: frameCount=${epInformation.frameCount}")
 
@@ -62,6 +82,8 @@ class FrameInputStream(file: String) {
 
     info
   }
+
+  private[io] def getNextBox: Option[Box] = nextBox
 
   private[this] def readBox(): Box = {
     val box = nextBox.get
@@ -176,5 +198,8 @@ class FrameInputStream(file: String) {
     boxReader.close()
   }
 
-
 }
+
+
+
+

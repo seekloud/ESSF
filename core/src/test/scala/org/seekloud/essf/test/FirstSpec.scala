@@ -8,7 +8,7 @@ import scala.collection.mutable
   * Date: 8/6/2018
   * Time: 11:30 AM
   */
-class FirstSpec extends FlatSpec {
+class FirstSpec extends UnitSpec {
 
 
   "A Stack" should "pop values in last-in-first-out order" in {
@@ -28,7 +28,7 @@ class FirstSpec extends FlatSpec {
 
   it should "has zero length in beginning" in {
     val emptyStack = new mutable.Stack[String]
-    assert(emptyStack.length + 1 == 0)
+    assert(emptyStack.length == 0)
   }
 
 }

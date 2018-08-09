@@ -10,17 +10,16 @@ package object io {
 
   val IO_VERSION: Byte = 1.toByte
 
-
   final case class EpisodeInfo(
     episodeVersion: Byte,
     frameCount: Int,
     snapshotCount: Int,
     createTime: Long,
+    isFinished: Boolean,
     simulatorId: String,
     simulatorVersion: String,
     metadata: Array[Byte],
-    initState: Array[Byte]
-  )
+    initState: Array[Byte])
 
 
   final case class FrameData(frameIndex: Int, eventsData: Array[Byte], stateData: Option[Array[Byte]]) {
