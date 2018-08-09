@@ -23,7 +23,14 @@ class FrameInputStream(file: String) {
   private var framePosition = 0
 
 
-  def init(): (SimulatorInfo, EpisodeInfo) = {
+  def reset(): EpisodeInfo = {
+    framePosition = 0
+    snapshotIndexMap.clear()
+    boxReader.position(0)
+    init()
+  }
+
+  def init(): EpisodeInfo = {
     nextBox = Some(boxReader.get()) //First box must be exist.
     val fileMeta = readBox().asInstanceOf[Boxes.FileMeta]
     val boxPositionBox = readBox().asInstanceOf[Boxes.BoxPosition]
@@ -36,22 +43,22 @@ class FrameInputStream(file: String) {
     snapshotIndexBox.snapshotIndex.foreach {
       case (k, v) => snapshotIndexMap.put(k, v)
     }
-
     val info = EpisodeInfo(
       fileMeta.version,
       epInformation.frameCount,
       epInformation.snapshotCount,
-      fileMeta.createTime)
-
-    //println(s"init input: frameCount=${epInformation.frameCount}")
-
-    epInfo = Some(info)
-    (SimulatorInfo(
+      fileMeta.createTime,
       simulatorInform.id,
       simulatorInform.version,
       simulatorMeta.metadata,
       initState.stateData
-    ), info)
+    )
+
+    //println(s"init input: frameCount=${epInformation.frameCount}")
+
+    epInfo = Some(info)
+
+    info
   }
 
   private[this] def readBox(): Box = {
@@ -103,14 +110,24 @@ class FrameInputStream(file: String) {
       if (idx < 0) {
         snapshotIndexMap.firstEntry()
       } else {
-        snapshotIndexMap.floorEntry(idx)
+        val tmp = snapshotIndexMap.floorEntry(idx)
+        if(tmp == null){
+          snapshotIndexMap.firstEntry()
+        } else {
+          tmp
+        }
       }
-    val frameIdx = entry.getKey
-    framePosition = frameIdx
-    position = entry.getValue
-    boxReader.position(position)
-    nextBox = Some(boxReader.get()) //First box must be exist.
-    frameIdx
+
+    if(entry == null){
+      -1
+    } else {
+      val frameIdx = entry.getKey
+      framePosition = frameIdx
+      position = entry.getValue
+      boxReader.position(position)
+      nextBox = Some(boxReader.get()) //First box must be exist.
+      frameIdx
+    }
   }
 
   def gotoSnapshotByRatio(ratio: Double): Int = {

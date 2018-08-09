@@ -1,7 +1,9 @@
 package org.seekloud.essf
 
+import java.io.{BufferedInputStream, File, FileInputStream, FileOutputStream}
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
+import java.util.zip.{ZipEntry, ZipFile, ZipInputStream, ZipOutputStream}
 
 import scala.collection.immutable.SortedMap
 
@@ -21,7 +23,34 @@ object Simulator {
   }
 
 
-  def main(args: Array[String]): Unit = {
+
+
+  def main5(args: Array[String]): Unit = {
+    val target = "test_data/ziptest1.zip"
+    val zipInput = new ZipFile(target)
+    val inputStream = zipInput.getInputStream(zipInput.getEntry("f1.txt"))
+
+    val bytes = new Array[Byte](256)
+    val len = inputStream.read(bytes)
+    val data = new Array[Byte](len)
+    System.arraycopy(bytes, 0, data, 0, len)
+
+    val str = new String(data)
+    println(s"data:$str")
+  }
+
+  def main4(args: Array[String]): Unit = {
+
+    val target = "test_data/ziptest1.zip"
+    val zipOutput = new ZipOutputStream(new FileOutputStream(target))
+    zipOutput.putNextEntry(new ZipEntry("f1.txt"))
+    zipOutput.write("hello".getBytes("utf-8"))
+    zipOutput.close()
+    println("DONE.")
+
+  }
+
+  def main3(args: Array[String]): Unit = {
 
     val arr1 = Array(1,2,3,4,5)
     val arr2 = Array(1,2,3,4,5)

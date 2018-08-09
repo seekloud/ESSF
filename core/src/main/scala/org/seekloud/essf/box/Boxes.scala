@@ -306,7 +306,6 @@ object Boxes {
 
   final case class EmptyFrame() extends Box(BoxType.emptyFrame) {
     override lazy val payloadSize: Int = 0
-
     override def writePayload(buf: ByteBuffer): ByteBuffer = {
       buf
     }

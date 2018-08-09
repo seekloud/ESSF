@@ -18,6 +18,5 @@ abstract class UnitSpec
     with Inspectors {
 
 
-  val rdm = new Random()
 
 }

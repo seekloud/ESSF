@@ -12,22 +12,17 @@ import scala.util.Random
   * Date: 8/8/2018
   * Time: 4:32 PM
   */
-class EpisodeTest extends UnitSpec {
+class EpisodeBaseTest extends UnitSpec {
 
-  import Utils._
-
-  val charset = "utf-8"
+  import TestUtils._
 
 
   def tmpFile(file: String): String = {
-    "test_data/episodeTest/" + file
+    testFile("episodeTest", file)
   }
 
-  val simulatorId = "bigSnake"
-  val dataVersion = "1.0.3"
 
-
-  "An Episode" should "init correctly" in  {
+  "An Episode" should "init correctly" in {
     val file = tmpFile("initCorrectly.essf")
     val metadata = "abcdeflalalal你好世界.!@#$".getBytes(charset)
     val initState = "123456abcdef2lalal你好世界.!@#$".getBytes(charset)
@@ -36,31 +31,37 @@ class EpisodeTest extends UnitSpec {
     output.finish()
 
     val input = new FrameInputStream(file)
-    val (inform, epInfo) = input.init()
+    val epInfo = input.init()
     input.close()
 
     assert(
-      simulatorId == inform.id
-      && dataVersion == inform.version
-      && Utils.arrayEquals(metadata, inform.metadata)
-      && Utils.arrayEquals(initState, inform.initState)
+      simulatorId == epInfo.simulatorId
+      && dataVersion == epInfo.simulatorVersion
+      && Utils.arrayEquals(metadata, epInfo.metadata)
+      && Utils.arrayEquals(initState, epInfo.initState)
       && epInfo.frameCount == 0
     )
   }
 
-  def getOutput(file: String): FrameOutputStream = {
-    val metadata = "abcdeflalaaalal你好世界.!@#$".getBytes(charset)
-    val initState = "cc123456abcdef2lalal你好世界.!@#$".getBytes(charset)
+  it should "reset correctly" in {
+    val file = tmpFile("initCorrectly.essf")
+    val metadata = "abcdeflalalal你好世界.!@#$".getBytes(charset)
+    val initState = "123456abcdef2lalal你好世界.!@#$".getBytes(charset)
     val output = new FrameOutputStream(file)
     output.init(simulatorId, dataVersion, metadata, initState)
-    output
-  }
+    output.finish()
 
-
-  def getInput(file: String): (FrameInputStream, EpisodeInfo) = {
     val input = new FrameInputStream(file)
-    val (_, epInfo) = input.init()
-    (input, epInfo)
+    input.init()
+    val epInfo = input.reset()
+
+    assert(
+      simulatorId == epInfo.simulatorId
+      && dataVersion == epInfo.simulatorVersion
+      && Utils.arrayEquals(metadata, epInfo.metadata)
+      && Utils.arrayEquals(initState, epInfo.initState)
+      && epInfo.frameCount == 0
+    )
   }
 
 
@@ -68,11 +69,11 @@ class EpisodeTest extends UnitSpec {
     val file = tmpFile("keepOneFrame1.essf")
     val data1 = rdm.nextString(5142).getBytes(charset)
 
-    val output = getOutput(file)
+    val output = getOutputStream(file)
     output.writeFrame(data1)
     output.finish()
 
-    val (input, epInfo) = getInput(file)
+    val (input, epInfo) = getInputStream(file)
     val f1 = input.readFrame()
     val f2 = input.readFrame()
     input.close()
@@ -89,11 +90,11 @@ class EpisodeTest extends UnitSpec {
     val file = tmpFile("keepOneFrame2.essf")
     val data1 = new Array[Byte](0)
 
-    val output = getOutput(file)
+    val output = getOutputStream(file)
     output.writeFrame(data1)
     output.finish()
 
-    val (input, epInfo) = getInput(file)
+    val (input, epInfo) = getInputStream(file)
     val f1 = input.readFrame()
     val f2 = input.readFrame()
     input.close()
@@ -109,11 +110,11 @@ class EpisodeTest extends UnitSpec {
   it can "keep one empty frame" in {
     val file = tmpFile("keepOneFrame3.essf")
 
-    val output = getOutput(file)
+    val output = getOutputStream(file)
     output.writeEmptyFrame()
     output.finish()
 
-    val (input, epInfo) = getInput(file)
+    val (input, epInfo) = getInputStream(file)
     val f1 = input.readFrame()
     val f2 = input.readFrame()
     input.close()
@@ -131,11 +132,32 @@ class EpisodeTest extends UnitSpec {
     val data1 = rdm.nextString(5100).getBytes(charset)
     val data2 = rdm.nextString(1512001).getBytes(charset)
 
-    val output = getOutput(file)
+    val output = getOutputStream(file)
     output.writeFrame(data1, Some(data2))
     output.finish()
 
-    val (input, epInfo) = getInput(file)
+    val (input, epInfo) = getInputStream(file)
+    val f1 = input.readFrame()
+    val f2 = input.readFrame()
+    input.close()
+
+    assert(
+      f1.contains(FrameData(0, data1, Some(data2))) &&
+      epInfo.frameCount == 1 &&
+      f2.isEmpty
+    )
+  }
+
+  it can "keep one frame with empty events but some state" in {
+    val file = tmpFile("keepOneFrame5.essf")
+    val data1 = new Array[Byte](0)
+    val data2 = rdm.nextString(1512001).getBytes(charset)
+
+    val output = getOutputStream(file)
+    output.writeFrame(data1, Some(data2))
+    output.finish()
+
+    val (input, epInfo) = getInputStream(file)
     val f1 = input.readFrame()
     val f2 = input.readFrame()
     input.close()
@@ -154,12 +176,12 @@ class EpisodeTest extends UnitSpec {
     val data2 = rdm.nextString(112001).getBytes(charset)
     val data3 = rdm.nextString(1512001).getBytes(charset)
 
-    val output = getOutput(file)
+    val output = getOutputStream(file)
     output.writeFrame(data1, Some(data2))
     output.writeFrame(data3)
     output.finish()
 
-    val (input, epInfo) = getInput(file)
+    val (input, epInfo) = getInputStream(file)
     val f1 = input.readFrame()
     val f2 = input.readFrame()
     val f3 = input.readFrame()
@@ -179,14 +201,13 @@ class EpisodeTest extends UnitSpec {
     val file = tmpFile("keepTwoFrame1.essf")
     val data1 = rdm.nextString(5000).getBytes(charset)
     val data2 = rdm.nextString(1121).getBytes(charset)
-    val data3 = rdm.nextString(15101).getBytes(charset)
 
-    val output = getOutput(file)
+    val output = getOutputStream(file)
     output.writeFrame(data1, Some(data2))
     output.writeEmptyFrame()
     output.finish()
 
-    val (input, epInfo) = getInput(file)
+    val (input, epInfo) = getInputStream(file)
     val f1 = input.readFrame()
     val f2 = input.readFrame()
     val f3 = input.readFrame()
@@ -209,12 +230,12 @@ class EpisodeTest extends UnitSpec {
     val data2 = rdm.nextString(112001).getBytes(charset)
     val data3 = rdm.nextString(1512001).getBytes(charset)
 
-    val output = getOutput(file)
+    val output = getOutputStream(file)
     output.writeEmptyFrame()
     output.writeFrame(data1, Some(data2))
     output.finish()
 
-    val (input, epInfo) = getInput(file)
+    val (input, epInfo) = getInputStream(file)
     val f1 = input.readFrame()
     val f2 = input.readFrame()
     val f3 = input.readFrame()
@@ -231,51 +252,15 @@ class EpisodeTest extends UnitSpec {
   }
 
 
-  def getRandomFrames(
-    len: Int,
-    ratio1: Double,
-    ratio2: Double
-  ): immutable.IndexedSeq[Option[FrameData]] = {
-
-    val data1 = new Array[Byte](8 * 1024)
-    val data2 = new Array[Byte](29 * 1024)
-
-
-
-
-
-    def getFrame(idx: Int): Option[FrameData] = {
-      rdm.nextDouble() match {
-        case x if x > ratio1 =>
-          rdm.nextBytes(data1)
-          rdm.nextDouble() match {
-            case y if y > ratio2 =>
-              rdm.nextBytes(data2)
-              Some(FrameData(idx, data1, Some(data2)))
-            case _ => Some(FrameData(idx, data1, None))
-          }
-        case _ => None
-      }
-    }
-
-    (0 until len).map(i => getFrame(i))
-  }
 
 
   it can "keep many frames" in {
-    val file = tmpFile("keepManyFrame2.essf")
+    val file = tmpFile("keepManyFrame.essf")
 
-    val frames = getRandomFrames(10000, 0.5, 0.95)
-/*    val data1 = "hello".getBytes()
-    val data2 = "ok".getBytes()
-    val frames = IndexedSeq(
-      Some(FrameData(0, data1, None)),
-      None,
-      Some(FrameData(2, data2, None))
-    )*/
-    val output = getOutput(file)
+    val frames = getRandomFrames(36000, 0.3, 0.02)
+    val output = getOutputStream(file)
 
-    frames.foreach{
+    frames.foreach {
       case Some(FrameData(idx, d1, d2)) =>
         val r = output.writeFrame(d1, d2)
         assert(idx == r)
@@ -283,12 +268,12 @@ class EpisodeTest extends UnitSpec {
     }
     output.finish()
 
-    val (input, epInfo) = getInput(file)
+    val (input, epInfo) = getInputStream(file)
     val arrayBuffer = new ArrayBuffer[Option[FrameData]]()
-    while(input.hasMoreFrame) {
+    while (input.hasMoreFrame) {
       input.readFrame() match {
         case Some(f) =>
-          if(f.eventsData.length == 0) {
+          if (f.eventsData.length == 0 && f.stateData.isEmpty) {
             arrayBuffer.append(None)
           } else {
             arrayBuffer.append(Some(f))
@@ -300,15 +285,61 @@ class EpisodeTest extends UnitSpec {
     val rst = arrayBuffer.toIndexedSeq
     input.close()
 
-/*
-    println("++++++++++++++++++++++++++++++++++++++++++++++++ ")
-    println(frames.mkString("\n"))
-    println("++++++++++++++++++++++++++++++++++++++++++++++++ ")
-    println(rst.mkString("\n"))
-*/
+/*    println(s"FRAME COUNT=${epInfo.frameCount}")
+    println(s"SNAPSHOT COUNT=${epInfo.snapshotCount}")*/
+
+    assert(
+      rst.equals(frames) &&
+      epInfo.frameCount == frames.length
+    )
+  }
 
 
-    println(s"SNAPSHOT COUNT=${epInfo.snapshotCount}")
+  it can "keep many frames with reset" in {
+    val file = tmpFile("keepManyFrame2.essf")
+    val len = 36000
+
+    val frames = getRandomFrames(len, 0.3, 0.02)
+    val output = getOutputStream(file)
+
+    frames.foreach {
+      case Some(FrameData(idx, d1, d2)) =>
+        val r = output.writeFrame(d1, d2)
+        assert(idx == r)
+      case None => output.writeEmptyFrame()
+    }
+    output.finish()
+
+
+
+
+    val (input, epInfo) = getInputStream(file)
+
+    (0 until 5).foreach{ _ =>
+      val stop = rdm.nextInt(len)
+      (0 until stop).foreach( _ => input.readFrame())
+      input.reset()
+      println(s"RESET input at $stop")
+    }
+
+    val arrayBuffer = new ArrayBuffer[Option[FrameData]]()
+    while (input.hasMoreFrame) {
+      input.readFrame() match {
+        case Some(f) =>
+          if (f.eventsData.length == 0 && f.stateData.isEmpty) {
+            arrayBuffer.append(None)
+          } else {
+            arrayBuffer.append(Some(f))
+          }
+        case None =>
+      }
+    }
+
+    val rst = arrayBuffer.toIndexedSeq
+    input.close()
+
+/*    println(s"FRAME COUNT=${epInfo.frameCount}")
+    println(s"SNAPSHOT COUNT=${epInfo.snapshotCount}")*/
 
     assert(
       rst.equals(frames) &&

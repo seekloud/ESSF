@@ -12,6 +12,7 @@ import org.seekloud.essf.test.UnitSpec
 class BoxesTest extends UnitSpec {
 
 
+  import TestUtils._
 
   def tmpFile(file: String) = {
     "test_data/boxesTest/" + file
