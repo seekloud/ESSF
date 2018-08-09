@@ -130,10 +130,16 @@ class EpisodeAdvanceTest extends UnitSpec {
     val target3 = input.readFrame().get
 
     val rst4 = input.gotoSnapshot(4)
+    val rst8 = input.gotoFirstSnapshot()
     val target4 = input.readFrame().get
 
     val rst5 = input.gotoSnapshot(5)
+    val rst9 = input.gotoLastSnapshot()
     val target5 = input.readFrame().get
+
+    val rst6 = input.getFirstSnapshotFrameIndex
+    val rst7 = input.getFirstSnapshotFrameIndex
+
 
 
     input.close()
@@ -156,6 +162,10 @@ class EpisodeAdvanceTest extends UnitSpec {
       rst3 == -1 &&
       rst4 == -1 &&
       rst5 == -1 &&
+      rst6 == -1 &&
+      rst7 == -1 &&
+      rst8 == -1 &&
+      rst9 == -1 &&
       target1.equals(expectList(1)) &&
       target2.equals(expectList(2)) &&
       target3.equals(expectList(3)) &&
@@ -277,6 +287,22 @@ class EpisodeAdvanceTest extends UnitSpec {
     val targetList16 = readFrames(6, input)
 
 
+    val firstSnapshotIndex = input.getFirstSnapshotFrameIndex
+    val lastSnapshotIndex = input.getLastSnapshotFrameIndex
+
+
+    val expectList4 = expectList1
+    input.gotoFirstSnapshot()
+    val targetList17 = readFrames(6, input)
+
+
+    val expectList5 = expectList2
+    input.gotoLastSnapshot()
+    val targetList18 = readFrames(6, input)
+
+
+
+
     input.close()
 
     /*
@@ -307,7 +333,12 @@ class EpisodeAdvanceTest extends UnitSpec {
       expectList3.equals(targetList13) &&
       expectList3.equals(targetList14) &&
       expectList3.equals(targetList15) &&
-      expectList3.equals(targetList16)
+      expectList3.equals(targetList15) &&
+      expectList3.equals(targetList16) &&
+      expectList4.equals(targetList17) &&
+      expectList5.equals(targetList18) &&
+      firstSnapshotIndex == 4 &&
+      lastSnapshotIndex == 10
     )
 
   }

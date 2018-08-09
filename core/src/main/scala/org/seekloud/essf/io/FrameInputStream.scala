@@ -1,5 +1,7 @@
 package org.seekloud.essf.io
 
+import java.util.{Map, NoSuchElementException}
+
 import org.seekloud.essf.Utils
 import org.seekloud.essf.box._
 
@@ -79,7 +81,6 @@ class FrameInputStream(file: String) {
     framePosition < epInfo.get.frameCount
   }
 
-
   def readFrame(): Option[FrameData] = {
     val curr = framePosition
 
@@ -105,20 +106,37 @@ class FrameInputStream(file: String) {
 
   }
 
-  def gotoSnapshot(idx: Int): Int = {
-    val entry =
-      if (idx < 0) {
-        snapshotIndexMap.firstEntry()
-      } else {
-        val tmp = snapshotIndexMap.floorEntry(idx)
-        if(tmp == null){
-          snapshotIndexMap.firstEntry()
-        } else {
-          tmp
-        }
-      }
+  def getFirstSnapshotFrameIndex: Int = {
+    try
+      snapshotIndexMap.firstKey()
+    catch {
+      case _: NoSuchElementException => -1
+    }
+  }
 
-    if(entry == null){
+  def getLastSnapshotFrameIndex: Int = {
+    try
+      snapshotIndexMap.lastKey()
+    catch {
+      case _: NoSuchElementException => -1
+    }
+  }
+
+
+  def gotoFirstSnapshot(): Int = {
+    gotoSnapshotByEntry(
+      snapshotIndexMap.firstEntry()
+    )
+  }
+
+  def gotoLastSnapshot(): Int = {
+    gotoSnapshotByEntry(
+      snapshotIndexMap.lastEntry()
+    )
+  }
+
+  private[this] def gotoSnapshotByEntry(entry: Map.Entry[Int, Long]) = {
+    if (entry == null) {
       -1
     } else {
       val frameIdx = entry.getKey
@@ -130,6 +148,22 @@ class FrameInputStream(file: String) {
     }
   }
 
+  def gotoSnapshot(idx: Int): Int = {
+    val entry =
+      if (idx < 0) {
+        snapshotIndexMap.firstEntry()
+      } else {
+        val tmp = snapshotIndexMap.floorEntry(idx)
+        if (tmp == null) {
+          snapshotIndexMap.firstEntry()
+        } else {
+          tmp
+        }
+      }
+    gotoSnapshotByEntry(entry)
+  }
+
+
   def gotoSnapshotByRatio(ratio: Double): Int = {
     assert(ratio >= 0.000000000001)
     assert(ratio <= 1.000000000001)
@@ -137,7 +171,8 @@ class FrameInputStream(file: String) {
     gotoSnapshot(Math.ceil(idx).toInt)
   }
 
-  def close(): Unit ={
+
+  def close(): Unit = {
     boxReader.close()
   }
 
