@@ -1,7 +1,5 @@
 package essf.jvmExample
 
-import org.seekloud.essf.TmpTests
-
 /**
   * User: Taoz
   * Date: 8/5/2018
@@ -12,7 +10,6 @@ object Test1 {
   def main(args: Array[String]): Unit = {
     val self = this.getClass.toString
     println(s"i am $self")
-    TmpTests.helloWorld()
     println("DONE>")
   }
 

@@ -206,10 +206,6 @@ class FrameOutputStream(
     frameNum
   }
 
-  def writeConnectFrame(eventsData: Array[Byte], stateData: Array[Byte]): Int = {
-    writeFrame(eventsData, Some(stateData))
-  }
-
   def writeEmptyFrame(): Int = {
     val frameNum = currentFrame
     //println(s"write empty frame: frameNum=$frameNum, after=${frameNum + 1}")

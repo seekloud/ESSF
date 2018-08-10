@@ -35,8 +35,8 @@ class EpisodeBaseTest extends UnitSpec {
     assert(
       simulatorId == epInfo.simulatorId
       && dataVersion == epInfo.simulatorVersion
-      && Utils.arrayEquals(metadata, epInfo.metadata)
-      && Utils.arrayEquals(initState, epInfo.initState)
+      && Utils.arrayEquals(metadata, epInfo.simulatorMetadata)
+      && Utils.arrayEquals(initState, epInfo.simulatorInitState)
       && epInfo.frameCount == 0
     )
   }
@@ -57,8 +57,8 @@ class EpisodeBaseTest extends UnitSpec {
     assert(
       simulatorId == epInfo.simulatorId
       && dataVersion == epInfo.simulatorVersion
-      && Utils.arrayEquals(metadata, epInfo.metadata)
-      && Utils.arrayEquals(initState, epInfo.initState)
+      && Utils.arrayEquals(metadata, epInfo.simulatorMetadata)
+      && Utils.arrayEquals(initState, epInfo.simulatorInitState)
       && epInfo.frameCount == 0
     )
   }

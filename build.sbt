@@ -1,7 +1,6 @@
 
 
 lazy val baseSettings = Seq(
-  //version := "0.0.1-SNAPSHOT",
   version := "0.0.1-beta2-SNAPSHOT",
   scalaVersion := "2.12.6",
   organization := "org.seekloud",
@@ -20,12 +19,11 @@ lazy val core =
       name := "essf",
       baseSettings,
       publishSettings
+    ).settings(
+    libraryDependencies ++= Seq(
+      "org.scalatest" %% "scalatest" % "3.0.5" % "test",
     )
-    .settings(
-      libraryDependencies ++= Seq(
-        "org.scalatest" %% "scalatest" % "3.0.5" % "test",
-      )
-    )
+  )
 
 
 lazy val example = project.in(file("example"))
@@ -33,7 +31,11 @@ lazy val example = project.in(file("example"))
   .settings(
     name := "example",
     baseSettings
+  ).settings(
+  updateOptions := updateOptions.value.withLatestSnapshots(false),
+  libraryDependencies ++= Seq(
   )
+)
 
 
 lazy val publishSettings = Seq(

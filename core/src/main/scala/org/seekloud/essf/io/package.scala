@@ -18,8 +18,8 @@ package object io {
     isFinished: Boolean,
     simulatorId: String,
     simulatorVersion: String,
-    metadata: Array[Byte],
-    initState: Array[Byte])
+    simulatorMetadata: Array[Byte],
+    simulatorInitState: Array[Byte])
 
 
   final case class FrameData(frameIndex: Int, eventsData: Array[Byte], stateData: Option[Array[Byte]]) {
