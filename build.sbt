@@ -20,6 +20,7 @@ lazy val core =
       baseSettings,
       publishSettings
     ).settings(
+    parallelExecution in Test := false,
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % "3.0.5" % "test",
     )
