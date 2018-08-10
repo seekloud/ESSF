@@ -1,6 +1,6 @@
 package org.seekloud.essf.test
 
-import org.seekloud.essf.Simulator
+import org.seekloud.essf.TmpTests
 
 /**
   * User: Taoz
@@ -11,7 +11,7 @@ object Test {
 
   def main(args: Array[String]): Unit = {
     println(s"hi, I am ${this.getClass.toString}")
-    Simulator.helloWorld()
+    TmpTests.helloWorld()
   }
 
 }

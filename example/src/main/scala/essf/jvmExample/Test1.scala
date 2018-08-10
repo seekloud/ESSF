@@ -1,6 +1,6 @@
 package essf.jvmExample
 
-import org.seekloud.essf.Simulator
+import org.seekloud.essf.TmpTests
 
 /**
   * User: Taoz
@@ -12,7 +12,7 @@ object Test1 {
   def main(args: Array[String]): Unit = {
     val self = this.getClass.toString
     println(s"i am $self")
-    Simulator.helloWorld()
+    TmpTests.helloWorld()
     println("DONE>")
   }
 

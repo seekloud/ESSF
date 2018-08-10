@@ -12,18 +12,15 @@ import scala.collection.immutable.SortedMap
   * Date: 8/5/2018
   * Time: 6:09 PM
   */
-class Simulator {
+class TmpTests {
 
 }
 
 
-object Simulator {
+object TmpTests {
   def helloWorld(): Unit = {
     println("hello, world.")
   }
-
-
-
 
   def main5(args: Array[String]): Unit = {
     val target = "test_data/ziptest1.zip"

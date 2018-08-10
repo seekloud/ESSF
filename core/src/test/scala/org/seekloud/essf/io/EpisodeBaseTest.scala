@@ -3,9 +3,7 @@ package org.seekloud.essf.io
 import org.seekloud.essf.Utils
 import org.seekloud.essf.test.UnitSpec
 
-import scala.collection.immutable
 import scala.collection.mutable.ArrayBuffer
-import scala.util.Random
 
 /**
   * User: Taoz
@@ -43,6 +41,7 @@ class EpisodeBaseTest extends UnitSpec {
     )
   }
 
+
   it should "reset correctly" in {
     val file = tmpFile("initCorrectly.essf")
     val metadata = "abcdeflalalal你好世界.!@#$".getBytes(charset)
@@ -67,7 +66,8 @@ class EpisodeBaseTest extends UnitSpec {
 
   it can "keep one frame" in {
     val file = tmpFile("keepOneFrame1.essf")
-    val data1 = rdm.nextString(5142).getBytes(charset)
+    //val data1 = rdm.nextString(5142).getBytes(charset)
+    val data1 = "abcdefg".getBytes(charset)
 
     val output = getOutputStream(file)
     output.writeFrame(data1)
@@ -77,6 +77,9 @@ class EpisodeBaseTest extends UnitSpec {
     val f1 = input.readFrame()
     val f2 = input.readFrame()
     input.close()
+
+//    println(s"f1:$f1")
+//    println(s"f2:$f2")
 
     assert(
       f1.contains(FrameData(0, data1, None)) &&
@@ -252,8 +255,6 @@ class EpisodeBaseTest extends UnitSpec {
   }
 
 
-
-
   it can "keep many frames" in {
     val file = tmpFile("keepManyFrame.essf")
 
@@ -285,8 +286,8 @@ class EpisodeBaseTest extends UnitSpec {
     val rst = arrayBuffer.toIndexedSeq
     input.close()
 
-/*    println(s"FRAME COUNT=${epInfo.frameCount}")
-    println(s"SNAPSHOT COUNT=${epInfo.snapshotCount}")*/
+    /*    println(s"FRAME COUNT=${epInfo.frameCount}")
+        println(s"SNAPSHOT COUNT=${epInfo.snapshotCount}")*/
 
     assert(
       rst.equals(frames) &&
@@ -311,15 +312,13 @@ class EpisodeBaseTest extends UnitSpec {
     output.finish()
 
 
-
-
     val (input, epInfo) = getInputStream(file)
 
-    (0 until 5).foreach{ _ =>
+    (0 until 5).foreach { _ =>
       val stop = rdm.nextInt(len)
-      (0 until stop).foreach( _ => input.readFrame())
+      (0 until stop).foreach(_ => input.readFrame())
       input.reset()
-      println(s"RESET input at $stop")
+//      println(s"RESET input at $stop")
     }
 
     val arrayBuffer = new ArrayBuffer[Option[FrameData]]()
@@ -338,8 +337,8 @@ class EpisodeBaseTest extends UnitSpec {
     val rst = arrayBuffer.toIndexedSeq
     input.close()
 
-/*    println(s"FRAME COUNT=${epInfo.frameCount}")
-    println(s"SNAPSHOT COUNT=${epInfo.snapshotCount}")*/
+    /*    println(s"FRAME COUNT=${epInfo.frameCount}")
+        println(s"SNAPSHOT COUNT=${epInfo.snapshotCount}")*/
 
     assert(
       rst.equals(frames) &&

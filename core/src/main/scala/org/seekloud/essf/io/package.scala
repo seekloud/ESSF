@@ -46,12 +46,10 @@ package object io {
           new String(bytes, "utf-8")
         }
       }
-
       val str1 = byte2Str(eventsData)
       val str2 = stateData.map(byte2Str).getOrElse("[NONE]")
       s"FrameData($frameIndex, $str1, $str2)"
     }
-
   }
 
 

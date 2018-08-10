@@ -1,5 +1,6 @@
 package org.seekloud.essf.io
 
+import org.seekloud.essf.box.Boxes.BoxIndexes
 import org.seekloud.essf.box._
 
 import scala.collection.mutable
@@ -14,7 +15,6 @@ class FrameOutputStream(
 ) {
 
   private[this] val boxPositions = mutable.HashMap.empty[String, Long]
-
   private[this] var currentFrame = 0
   private[this] var filePosition = 0l
   private[this] var snapShotIndexSeq = List.empty[(Int, Long)]
@@ -28,12 +28,13 @@ class FrameOutputStream(
   ): FrameOutputStream = {
     boxWriter = Some(new ESSFWriter(targetFile))
     writeBox(Boxes.FileMeta(IO_VERSION, System.currentTimeMillis()))
-    writeBox(Boxes.BoxPosition(filePosition, -1l, -1l, -1l, -1l), indexIt = true)
-    writeBox(Boxes.EpisodeInform(0, 0), indexIt = true)
-    writeBox(Boxes.EpisodeStatus(false), indexIt = true)
+    writeBox(Boxes.BoxIndexes(filePosition, -1l, -1l, -1l, -1l, -1l))
+    writeBox(Boxes.EpisodeInform(0, 0))
+    writeBox(Boxes.EpisodeStatus(false))
     writeBox(Boxes.SimulatorInform(simulatorId, dataVersion))
     writeBox(Boxes.SimulatorMetadata(simulatorMetadata))
     writeBox(Boxes.InitState(initState))
+    writeBox(Boxes.BeginOfFrame())
     this
   }
 
@@ -124,23 +125,38 @@ class FrameOutputStream(
   }
 
   private[this] def updateBoxPositionBox(): Unit = {
-    val box = Boxes.BoxPosition(
-      boxPositions(BoxType.boxPosition),
+    val box = Boxes.BoxIndexes(
+      boxPositions(BoxType.boxIndexes),
       boxPositions(BoxType.episodeInform),
       boxPositions(BoxType.episodeStatus),
       boxPositions(BoxType.endOfFrame),
-      boxPositions(BoxType.snapshotPosition)
+      boxPositions(BoxType.snapshotPosition),
+      boxPositions(BoxType.beginOfFrame)
     )
     updateBox(box)
   }
 
   private[this] def genSnapshotIndexBox(): Unit = {
-    writeBox(Boxes.SnapshotPosition(snapShotIndexSeq), indexIt = true)
+    writeBox(Boxes.SnapshotPosition(snapShotIndexSeq))
   }
 
-  private def writeBox(box: Box, indexIt: Boolean = false): Long = {
+  private def needIndex(box: Box): Boolean = {
+    box match {
+      case _: Boxes.SimulatorFrame => false
+      case _: Boxes.EmptyFrame => false
+      case _: Boxes.SnapshotPosition => true
+      case _: Boxes.EndOfFrame => true
+      case _: Boxes.BoxIndexes => true
+      case _: Boxes.EpisodeStatus => true
+      case _: Boxes.EpisodeInform => true
+      case _: Boxes.BeginOfFrame => true
+      case _ => false
+    }
+  }
+
+  private def writeBox(box: Box): Long = {
     val curr = filePosition
-    if (indexIt) {
+    if (needIndex(box)) {
       boxPositions.put(box.boxType, curr)
     }
     filePosition += box.size
@@ -152,7 +168,7 @@ class FrameOutputStream(
 
     val canBeUpdated = box match {
       case _: Boxes.EpisodeInform => true
-      case _: Boxes.BoxPosition => true
+      case _: Boxes.BoxIndexes => true
       case _: Boxes.EpisodeStatus => true
       case _ => false
     }
@@ -163,7 +179,6 @@ class FrameOutputStream(
     } else {
       throw new EssfIOException(s"[boxType=${box.boxType}] can not be updated.")
     }
-
   }
 
   private[this] def internalWriteBoxToFile(
@@ -205,7 +220,7 @@ class FrameOutputStream(
 
 
   def finish(): Unit = {
-    writeBox(Boxes.EndOfFrame(), indexIt = true)
+    writeBox(Boxes.EndOfFrame())
     updateEpisodeInfo()
     genSnapshotIndexBox()
     writeBox(Boxes.EndOfFile())

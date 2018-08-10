@@ -5,6 +5,7 @@ import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 
 import org.seekloud.essf.box.Box
+import org.seekloud.essf.common.Constants._
 
 /**
   * User: Taoz
@@ -15,12 +16,8 @@ private[essf] class ESSFWriter(file: String) {
 
   import ESSFWriter.writeHead
 
-  final val DEFAULT_BUFFER_SIZE = 32 * 1024
   private val fc = new RandomAccessFile(new File(file), "rw").getChannel
-
-  //private val fc = new FileOutputStream(new File(file)).getChannel
-  private val defaultBuffer = ByteBuffer.allocateDirect(DEFAULT_BUFFER_SIZE)
-
+  private val defaultBuffer = ByteBuffer.allocateDirect(DEFAULT_BOX_BUFFER_SIZE)
 
   def position(pos: Long): Unit = {
     fc.position(pos)
@@ -61,7 +58,6 @@ private[essf] class ESSFWriter(file: String) {
     fc.close()
   }
 
-
 }
 
 object ESSFWriter{
@@ -72,7 +68,7 @@ object ESSFWriter{
     } else {
       buffer.putShort(boxSize.toShort)
     }
-    buffer.put(boxType.getBytes("utf-8"))
+    buffer.put(boxType.getBytes(utf8))
     if (boxSize > Short.MaxValue) {
       buffer.putInt(boxSize)
     }

@@ -8,6 +8,7 @@ import org.seekloud.essf.box
 import org.seekloud.essf.box._
 
 import scala.util.Try
+import org.seekloud.essf.common.Constants._
 
 /**
   * User: Taoz
@@ -16,8 +17,10 @@ import scala.util.Try
   */
 private[essf] class ESSFReader(file: String) {
 
+
+
   private val fc = new FileInputStream(new File(file)).getChannel
-  private val defaultBuffer = ByteBuffer.allocateDirect(32 * 1024)
+  private val defaultBuffer = ByteBuffer.allocateDirect(DEFAULT_BOX_BUFFER_SIZE)
 
   import ESSFReader.readHead
 
@@ -52,7 +55,7 @@ private[essf] class ESSFReader(file: String) {
   private[this] def decodeBox(boxType: String, buf: ByteBuffer): Box = {
     val boxTry: Try[Box] = boxType match {
       case BoxType.`fileMeta` => Boxes.FileMeta.readFromBuffer(buf)
-      case BoxType.boxPosition => Boxes.BoxPosition.readFromBuffer(buf)
+      case BoxType.`boxIndexes` => Boxes.BoxIndexes.readFromBuffer(buf)
       case BoxType.episodeInform => Boxes.EpisodeInform.readFromBuffer(buf)
       case BoxType.episodeStatus => Boxes.EpisodeStatus.readFromBuffer(buf)
       case BoxType.snapshotPosition => Boxes.SnapshotPosition.readFromBuffer(buf)
@@ -63,6 +66,7 @@ private[essf] class ESSFReader(file: String) {
       case BoxType.`simulatorMetadata` => Boxes.SimulatorMetadata.readFromBuffer(buf)
       case BoxType.`simulatorFrame` => Boxes.SimulatorFrame.readFromBuffer(buf)
       case BoxType.`endOfFrame` => Boxes.EndOfFrame.readFromBuffer(buf)
+      case BoxType.`beginOfFrame` => Boxes.BeginOfFrame.readFromBuffer(buf)
 
         //TODO
       case x =>
@@ -79,27 +83,30 @@ private[essf] class ESSFReader(file: String) {
 
 object ESSFReader {
 
-  private[this] val hBuff = ByteBuffer.allocateDirect(32)
+
+  val HEAD_BUFF_SIZE = 32
+  val HEAD_OF_HEAD = 6
+  val LARGE_SIZE_SIZE = 4
+  private[this] val hBuff = ByteBuffer.allocateDirect(HEAD_BUFF_SIZE)
 
 
   private def readHead(fc: FileChannel): (Int, String, Int) = {
     hBuff.clear()
-    hBuff.limit(6)
+    hBuff.limit(HEAD_OF_HEAD)
     fc.read(hBuff)
     hBuff.flip()
     var boxSize: Int = hBuff.getShort()
     val tmpArr = new Array[Byte](4)
     hBuff.get(tmpArr)
-    val boxType = new String(tmpArr, "utf-8")
-//    println(s"readHead boxType: $boxType")
-    var payloadSize = boxSize - 6
+    val boxType = new String(tmpArr, utf8)
+    var payloadSize = boxSize - HEAD_OF_HEAD
     if (boxSize == 1) {
       hBuff.clear()
-      hBuff.limit(4)
+      hBuff.limit(LARGE_SIZE_SIZE)
       fc.read(hBuff)
       hBuff.flip()
       boxSize = hBuff.getInt()
-      payloadSize = boxSize - 10
+      payloadSize = boxSize - HEAD_OF_HEAD - LARGE_SIZE_SIZE
     }
 
     (boxSize, boxType, payloadSize)

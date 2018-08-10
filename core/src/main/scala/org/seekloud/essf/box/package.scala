@@ -14,17 +14,17 @@ package object box {
 
   object BoxType {
     val fileMeta = "flmt"
-    val boxPosition = "bxps"
+    val boxIndexes = "bxix"
     val episodeInform = "epif"
     val snapshotPosition = "snps"
     val episodeStatus = "epst"
     val endOfFile = "eofl"
-
     val simulatorInform = "smli"
     val simulatorMetadata = "smlm"
     val simulatorFrame = "slfr"
     val initState = "itst"
     val emptyFrame = "emfr"
+    val beginOfFrame = "bgfr"
     val endOfFrame = "eofr"
   }
 

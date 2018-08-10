@@ -3,8 +3,9 @@ package org.seekloud.essf.io
 import java.util.{Map, NoSuchElementException}
 
 import org.seekloud.essf.Utils
-import org.seekloud.essf.box.Boxes.BoxPosition
+import org.seekloud.essf.box.Boxes.BoxIndexes
 import org.seekloud.essf.box.{Boxes, _}
+import org.seekloud.essf.common.Constants
 
 /**
   * User: Taoz
@@ -19,7 +20,7 @@ class FrameInputStream(file: String) {
   private var nextBox: Option[Box] = None
   private val snapshotIndexMap: java.util.TreeMap[Int, Long] = new java.util.TreeMap[Int, Long]()
   private var framePosition = 0
-  private var boxPositions: Option[BoxPosition] = None
+  private var boxPositions: Option[BoxIndexes] = None
 
 
   def getSnapshotIndexes: List[(Int, Long)] = {
@@ -29,7 +30,7 @@ class FrameInputStream(file: String) {
 
   def getEndOfFramePosition: Long = boxPositions.get.endOfFramePos
 
-  def getBoxPositions: BoxPosition = boxPositions.get
+  def getBoxPositions: BoxIndexes = boxPositions.get
 
   def getFilePosition: Long = position
 
@@ -47,7 +48,7 @@ class FrameInputStream(file: String) {
   def init(withSnapshot: Boolean = true): EpisodeInfo = {
     nextBox = Some(boxReader.get()) //First box must be exist.
     val fileMeta = readBox().asInstanceOf[Boxes.FileMeta]
-    boxPositions = Some(readBox().asInstanceOf[Boxes.BoxPosition])
+    boxPositions = Some(readBox().asInstanceOf[Boxes.BoxIndexes])
     val epInformation = readBox().asInstanceOf[Boxes.EpisodeInform]
     val epStatus = readBox().asInstanceOf[Boxes.EpisodeStatus]
     val simulatorInform = readBox().asInstanceOf[Boxes.SimulatorInform]
@@ -60,6 +61,15 @@ class FrameInputStream(file: String) {
         case (k, v) => snapshotIndexMap.put(k, v)
       }
     }
+    //println(s"init input: frameCount=${epInformation.frameCount}")
+
+    //[DANGEROUS HERE!!!] moving positions,
+    val beginOfFramePos = boxPositions.get.beginOfFramePos
+    boxReader.position(beginOfFramePos)
+    nextBox = Some(boxReader.get())
+    position = beginOfFramePos
+    readBox()
+
 
     val info = EpisodeInfo(fileMeta.version,
       epInformation.frameCount,
@@ -75,8 +85,6 @@ class FrameInputStream(file: String) {
       //warming here: "this file is incomplete, please fix it first."
       boxReader.close()
     }
-
-    //println(s"init input: frameCount=${epInformation.frameCount}")
 
     epInfo = Some(info)
 
@@ -119,7 +127,7 @@ class FrameInputStream(file: String) {
         Some(FrameData(curr, eData, sData))
       case Some(Boxes.EmptyFrame()) =>
         updatePosition()
-        Some(FrameData(curr, Utils.EmptyByteArray, None))
+        Some(FrameData(curr, Constants.EmptyByteArray, None))
       case _ =>
         //println(s"!!! no more frame framePosition=$framePosition vs epInfo.get.frameCount=${epInfo.get.frameCount}")
         framePosition = epInfo.get.frameCount
@@ -143,7 +151,6 @@ class FrameInputStream(file: String) {
       case _: NoSuchElementException => -1
     }
   }
-
 
   def gotoFirstSnapshot(): Int = {
     gotoSnapshotByEntry(
@@ -185,14 +192,12 @@ class FrameInputStream(file: String) {
     gotoSnapshotByEntry(entry)
   }
 
-
   def gotoSnapshotByRatio(ratio: Double): Int = {
     assert(ratio >= 0.000000000001)
     assert(ratio <= 1.000000000001)
     val idx = epInfo.get.frameCount * ratio
     gotoSnapshot(Math.ceil(idx).toInt)
   }
-
 
   def close(): Unit = {
     boxReader.close()

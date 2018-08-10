@@ -13,23 +13,13 @@ import scala.util.Try
   */
 object Boxes {
 
-  /*
-    ===============  episode box ==================
-    val fileMeta = "flmt"
-    val boxPosition = "bxps"
-    val episodeInform = "epif"
-    val snapshotPosition = "snps"
-    val episodeStatus = "epst"
-    val endOfFile = "eofl"
-   */
-
+  import org.seekloud.essf.common.Constants._
 
   final case class FileMeta(
     version: Byte,
     createTime: Long
   ) extends Box(BoxType.fileMeta) {
     override lazy val payloadSize: Int = 1 + 8
-
     override def writePayload(buf: ByteBuffer): ByteBuffer = {
       buf.put(version)
       buf.putLong(createTime)
@@ -46,14 +36,16 @@ object Boxes {
   }
 
 
-  final case class BoxPosition(
+
+  final case class BoxIndexes(
     boxPositionPos: Long,
     episodeInformPos: Long,
     episodeStatusPos: Long,
     endOfFramePos: Long,
-    snapshotPos: Long
-  ) extends Box(BoxType.boxPosition) {
-    override lazy val payloadSize: Int = 40
+    snapshotPos: Long,
+    beginOfFramePos: Long
+  ) extends Box(BoxType.boxIndexes) {
+    override lazy val payloadSize: Int = 48
 
     override def writePayload(buf: ByteBuffer): ByteBuffer = {
       buf.putLong(boxPositionPos)
@@ -61,31 +53,36 @@ object Boxes {
       buf.putLong(episodeStatusPos)
       buf.putLong(endOfFramePos)
       buf.putLong(snapshotPos)
+      buf.putLong(beginOfFramePos)
       buf
     }
 
     lazy val asMap = Map(
-      BoxType.boxPosition -> boxPositionPos,
+      BoxType.boxIndexes -> boxPositionPos,
       BoxType.episodeInform -> episodeInformPos,
       BoxType.episodeStatus -> episodeStatusPos,
       BoxType.endOfFrame -> endOfFramePos,
-      BoxType.snapshotPosition -> snapshotPos
+      BoxType.snapshotPosition -> snapshotPos,
+      BoxType.beginOfFrame -> beginOfFramePos
     )
   }
 
-  object BoxPosition {
-    def readFromBuffer(buf: ByteBuffer): Try[BoxPosition] = Try {
+  object BoxIndexes {
+    def readFromBuffer(buf: ByteBuffer): Try[BoxIndexes] = Try {
       val boxPositionPos = buf.getLong
       val episodeInformPos = buf.getLong
       val episodeStatusPos = buf.getLong
       val endOfFramePos = buf.getLong
-      val stateIndexPosition = buf.getLong
-      BoxPosition(
+      val snapshotPos = buf.getLong
+      val beginOfFramePos = buf.getLong
+      BoxIndexes(
         boxPositionPos,
         episodeInformPos,
         episodeStatusPos,
         endOfFramePos,
-        stateIndexPosition)
+        snapshotPos,
+        beginOfFramePos
+      )
     }
   }
 
@@ -168,7 +165,6 @@ object Boxes {
 
   final case class EndOfFile() extends Box(BoxType.endOfFile) {
     override lazy val payloadSize: Int = 0
-
     override def writePayload(buf: ByteBuffer): ByteBuffer = {
       buf
     }
@@ -180,20 +176,10 @@ object Boxes {
     }
   }
 
-
-  /*
-   ===================   simulator box   =====================
-    val simulatorInform = "smli"
-    val simulatorMetadata = "smlm"
-    val simulatorFrame = "slfr"
-    val endOfFrame = "eofr"
-   */
-
-
   final case class SimulatorInform(id: String, version: String) extends Box(BoxType.simulatorInform) {
 
-    private val idBytes = id.getBytes("utf-8")
-    private val verBytes = version.getBytes("utf-8")
+    private val idBytes = id.getBytes(utf8)
+    private val verBytes = version.getBytes(utf8)
     assert(idBytes.length < 127)
     assert(verBytes.length < 127)
 
@@ -213,12 +199,12 @@ object Boxes {
       val idLen = buf.get()
       val idArr = new Array[Byte](idLen)
       buf.get(idArr)
-      val id = new String(idArr, "UTF-8")
+      val id = new String(idArr, utf8)
 
       val verLen = buf.get()
       val verArr = new Array[Byte](verLen)
       buf.get(verArr)
-      val ver = new String(verArr, "UTF-8")
+      val ver = new String(verArr, utf8)
 
       SimulatorInform(id, ver)
     }
@@ -318,11 +304,18 @@ object Boxes {
     stateData: Array[Byte]
   ) extends Box(BoxType.initState) {
     override lazy val payloadSize: Int = 4 + stateData.length
-
     override def writePayload(buf: ByteBuffer): ByteBuffer = {
       buf.putInt(stateData.length)
       buf.put(stateData)
       buf
+    }
+
+    override def equals(obj: scala.Any): Boolean = {
+      obj match {
+        case InitState(data) =>
+          Utils.arrayEquals(data, stateData)
+        case _ => false
+      }
     }
   }
 
@@ -337,7 +330,6 @@ object Boxes {
 
   final case class EmptyFrame() extends Box(BoxType.emptyFrame) {
     override lazy val payloadSize: Int = 0
-
     override def writePayload(buf: ByteBuffer): ByteBuffer = {
       buf
     }
@@ -352,7 +344,6 @@ object Boxes {
 
   final case class EndOfFrame() extends Box(BoxType.endOfFrame) {
     override lazy val payloadSize: Int = 0
-
     override def writePayload(buf: ByteBuffer): ByteBuffer = {
       buf
     }
@@ -361,6 +352,20 @@ object Boxes {
   object EndOfFrame {
     def readFromBuffer(buf: ByteBuffer) = Try {
       EndOfFrame()
+    }
+  }
+
+
+  final case class BeginOfFrame() extends Box(BoxType.beginOfFrame) {
+    override lazy val payloadSize: Int = 0
+    override def writePayload(buf: ByteBuffer): ByteBuffer = {
+      buf
+    }
+  }
+
+  object BeginOfFrame {
+    def readFromBuffer(buf: ByteBuffer) = Try {
+      BeginOfFrame()
     }
   }
 
