@@ -209,13 +209,11 @@ class EpisodeContinueTest extends UnitSpec {
     }
 
 
-    val tmpBufferFile = new File(file + ".tmp")
-    val tmpFileExistsBeforeFix = tmpBufferFile.exists()
 
     val fixer = new FrameOutputStream(file)
     fixer.fix()
 
-    val tmpFileExistsAfterFix = tmpBufferFile.exists()
+
 
     val expectedList1 = List(
       FrameData(0, str2bytes("0aaa"), None),
@@ -252,9 +250,7 @@ class EpisodeContinueTest extends UnitSpec {
         targets2.equals(expectedList2) &&
         targets3.equals(expectedList2) &&
         epInfo1.frameCount == 9 &&
-        epInfo1.snapshotCount == 1 &&
-        !tmpFileExistsAfterFix &&
-        tmpFileExistsBeforeFix
+        epInfo1.snapshotCount == 1
     )
 
 

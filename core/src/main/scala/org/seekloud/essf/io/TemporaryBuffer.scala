@@ -1,11 +1,8 @@
 package org.seekloud.essf.io
 
 import java.io.File
-
 import org.seekloud.essf.box.{Box, Boxes}
-import org.seekloud.essf.box.Boxes.MutableInfoMap
 
-import scala.collection.mutable
 
 /**
   * Created by hongruying on 2018/9/1

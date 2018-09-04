@@ -37,61 +37,6 @@ object Boxes {
 
 
 
-//  final case class BoxIndexes(
-//    boxPositionPos: Long,
-//    episodeInformPos: Long,
-//    episodeStatusPos: Long,
-//    endOfFramePos: Long,
-//    snapshotPos: Long,
-//    beginOfFramePos: Long,
-//    mutableInfoMapPos:Long
-//  ) extends Box(BoxType.boxIndexes) {
-//    override lazy val payloadSize: Int = 56
-//
-//    override def writePayload(buf: ByteBuffer): ByteBuffer = {
-//      buf.putLong(boxPositionPos)
-//      buf.putLong(episodeInformPos)
-//      buf.putLong(episodeStatusPos)
-//      buf.putLong(endOfFramePos)
-//      buf.putLong(snapshotPos)
-//      buf.putLong(beginOfFramePos)
-//      buf.putLong(mutableInfoMapPos)
-//      buf
-//    }
-//
-//    lazy val asMap = Map(
-//      BoxType.boxIndexes -> boxPositionPos,
-//      BoxType.episodeInform -> episodeInformPos,
-//      BoxType.episodeStatus -> episodeStatusPos,
-//      BoxType.endOfFrame -> endOfFramePos,
-//      BoxType.snapshotPosition -> snapshotPos,
-//      BoxType.beginOfFrame -> beginOfFramePos,
-//      BoxType.mutableInfoMap -> mutableInfoMapPos
-//    )
-//  }
-//
-//  object BoxIndexes {
-//    def readFromBuffer(buf: ByteBuffer): Try[BoxIndexes] = Try {
-//      val boxPositionPos = buf.getLong
-//      val episodeInformPos = buf.getLong
-//      val episodeStatusPos = buf.getLong
-//      val endOfFramePos = buf.getLong
-//      val snapshotPos = buf.getLong
-//      val beginOfFramePos = buf.getLong
-//      val episodeMutableInfoMapPos = buf.getLong
-//      BoxIndexes(
-//        boxPositionPos,
-//        episodeInformPos,
-//        episodeStatusPos,
-//        endOfFramePos,
-//        snapshotPos,
-//        beginOfFramePos,
-//        episodeMutableInfoMapPos
-//      )
-//    }
-//  }
-
-
 
 
   final case class EpisodeInform(frameCount: Int, snapshotCount: Int) extends Box(BoxType.episodeInform) {
