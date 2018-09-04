@@ -1,5 +1,7 @@
 package org.seekloud.essf.io
 
+import java.io.File
+
 import org.seekloud.essf.test.UnitSpec
 
 /**
@@ -98,6 +100,89 @@ class EpisodeContinueTest extends UnitSpec {
   }
 
 
+//  it should "work with incomplete file" in {
+//    val file = tmpFile("continue2.essf")
+//    val output = getOutputStream(file)
+//
+//    val frames: IndexedSeq[Option[FrameData]] = IndexedSeq(
+//      Some(FrameData(0, str2bytes("0aaa"), None)),
+//      Some(FrameData(1, str2bytes("1aaa"), None)),
+//      None,
+//      Some(FrameData(3, str2bytes("3aaa"), None)),
+//      Some(FrameData(4, str2bytes("4aaa"), Some(str2bytes("ss11")))),
+//      Some(FrameData(5, str2bytes("5aaa"), None)),
+//      None,
+//      Some(FrameData(7, str2bytes("7aaa"), None)),
+//      Some(FrameData(8, str2bytes("8aaa"), None))
+//    )
+//
+//    frames.foreach {
+//      case Some(fd) =>
+//        val r = output.writeFrame(fd.eventsData, fd.stateData)
+//        if (fd.frameIndex != r) {
+//          throw new EssfIOException("frame index should equal.")
+//        }
+//      case None => output.writeEmptyFrame()
+//    }
+//    output.finish()
+//
+//    val file2 = tmpFile("continue2_1.essf")
+//
+//    val (input0, epInfo) = getInputStream(file)
+//    input0.readFrame()
+//    input0.readFrame()
+//    input0.readFrame()
+//    input0.readFrame()
+//    input0.readFrame()
+//    input0.readFrame()
+//    input0.close()
+//    val length = input0.getFilePosition + 5
+//
+//    println(s"length: $length")
+//
+//    copyPartFile(file, file2, length)
+//
+//    val fixer = new FrameOutputStream(file2)
+//    fixer.fix()
+//
+//    val expectedList1 = List(
+//      FrameData(0, str2bytes("0aaa"), None),
+//      FrameData(1, str2bytes("1aaa"), None),
+//      FrameData(2, new Array[Byte](0), None),
+//      FrameData(3, str2bytes("3aaa"), None),
+//      FrameData(4, str2bytes("4aaa"), Some(str2bytes("ss11"))),
+//      FrameData(5, str2bytes("5aaa"), None)
+//    )
+//
+//
+//    val expectedList2 = List(
+//      FrameData(4, str2bytes("4aaa"), Some(str2bytes("ss11"))),
+//      FrameData(5, str2bytes("5aaa"), None)
+//    )
+//
+//
+//    val (input1, epInfo1) = getInputStream(file2)
+//    val targets1 = readFrames(6, input1)
+//
+//    input1.gotoSnapshot(4)
+//    val targets2 = readFrames(2, input1)
+//
+//    input1.gotoSnapshot(5)
+//    val targets3 = readFrames(2, input1)
+//
+//
+//
+//    assert(
+//      targets1.equals(expectedList1) &&
+//      targets2.equals(expectedList2) &&
+//      targets3.equals(expectedList2) &&
+//      epInfo1.frameCount == 6 &&
+//      epInfo1.snapshotCount == 1
+//    )
+//
+//
+//  }
+
   it should "work with incomplete file" in {
     val file = tmpFile("continue2.essf")
     val output = getOutputStream(file)
@@ -122,26 +207,15 @@ class EpisodeContinueTest extends UnitSpec {
         }
       case None => output.writeEmptyFrame()
     }
-    output.finish()
 
-    val file2 = tmpFile("continue2_1.essf")
 
-    val (input0, epInfo) = getInputStream(file)
-    input0.readFrame()
-    input0.readFrame()
-    input0.readFrame()
-    input0.readFrame()
-    input0.readFrame()
-    input0.readFrame()
-    input0.close()
-    val length = input0.getFilePosition + 5
+    val tmpBufferFile = new File(file + ".tmp")
+    val tmpFileExistsBeforeFix = tmpBufferFile.exists()
 
-    println(s"length: $length")
-
-    copyPartFile(file, file2, length)
-
-    val fixer = new FrameOutputStream(file2)
+    val fixer = new FrameOutputStream(file)
     fixer.fix()
+
+    val tmpFileExistsAfterFix = tmpBufferFile.exists()
 
     val expectedList1 = List(
       FrameData(0, str2bytes("0aaa"), None),
@@ -149,7 +223,10 @@ class EpisodeContinueTest extends UnitSpec {
       FrameData(2, new Array[Byte](0), None),
       FrameData(3, str2bytes("3aaa"), None),
       FrameData(4, str2bytes("4aaa"), Some(str2bytes("ss11"))),
-      FrameData(5, str2bytes("5aaa"), None)
+      FrameData(5, str2bytes("5aaa"), None),
+      FrameData(6, new Array[Byte](0), None),
+      FrameData(7, str2bytes("7aaa"), None),
+      FrameData(8, str2bytes("8aaa"), None)
     )
 
 
@@ -159,8 +236,8 @@ class EpisodeContinueTest extends UnitSpec {
     )
 
 
-    val (input1, epInfo1) = getInputStream(file2)
-    val targets1 = readFrames(6, input1)
+    val (input1, epInfo1) = getInputStream(file)
+    val targets1 = readFrames(9, input1)
 
     input1.gotoSnapshot(4)
     val targets2 = readFrames(2, input1)
@@ -172,10 +249,12 @@ class EpisodeContinueTest extends UnitSpec {
 
     assert(
       targets1.equals(expectedList1) &&
-      targets2.equals(expectedList2) &&
-      targets3.equals(expectedList2) &&
-      epInfo1.frameCount == 6 &&
-      epInfo1.snapshotCount == 1
+        targets2.equals(expectedList2) &&
+        targets3.equals(expectedList2) &&
+        epInfo1.frameCount == 9 &&
+        epInfo1.snapshotCount == 1 &&
+        !tmpFileExistsAfterFix &&
+        tmpFileExistsBeforeFix
     )
 
 

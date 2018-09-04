@@ -37,54 +37,61 @@ object Boxes {
 
 
 
-  final case class BoxIndexes(
-    boxPositionPos: Long,
-    episodeInformPos: Long,
-    episodeStatusPos: Long,
-    endOfFramePos: Long,
-    snapshotPos: Long,
-    beginOfFramePos: Long
-  ) extends Box(BoxType.boxIndexes) {
-    override lazy val payloadSize: Int = 48
+//  final case class BoxIndexes(
+//    boxPositionPos: Long,
+//    episodeInformPos: Long,
+//    episodeStatusPos: Long,
+//    endOfFramePos: Long,
+//    snapshotPos: Long,
+//    beginOfFramePos: Long,
+//    mutableInfoMapPos:Long
+//  ) extends Box(BoxType.boxIndexes) {
+//    override lazy val payloadSize: Int = 56
+//
+//    override def writePayload(buf: ByteBuffer): ByteBuffer = {
+//      buf.putLong(boxPositionPos)
+//      buf.putLong(episodeInformPos)
+//      buf.putLong(episodeStatusPos)
+//      buf.putLong(endOfFramePos)
+//      buf.putLong(snapshotPos)
+//      buf.putLong(beginOfFramePos)
+//      buf.putLong(mutableInfoMapPos)
+//      buf
+//    }
+//
+//    lazy val asMap = Map(
+//      BoxType.boxIndexes -> boxPositionPos,
+//      BoxType.episodeInform -> episodeInformPos,
+//      BoxType.episodeStatus -> episodeStatusPos,
+//      BoxType.endOfFrame -> endOfFramePos,
+//      BoxType.snapshotPosition -> snapshotPos,
+//      BoxType.beginOfFrame -> beginOfFramePos,
+//      BoxType.mutableInfoMap -> mutableInfoMapPos
+//    )
+//  }
+//
+//  object BoxIndexes {
+//    def readFromBuffer(buf: ByteBuffer): Try[BoxIndexes] = Try {
+//      val boxPositionPos = buf.getLong
+//      val episodeInformPos = buf.getLong
+//      val episodeStatusPos = buf.getLong
+//      val endOfFramePos = buf.getLong
+//      val snapshotPos = buf.getLong
+//      val beginOfFramePos = buf.getLong
+//      val episodeMutableInfoMapPos = buf.getLong
+//      BoxIndexes(
+//        boxPositionPos,
+//        episodeInformPos,
+//        episodeStatusPos,
+//        endOfFramePos,
+//        snapshotPos,
+//        beginOfFramePos,
+//        episodeMutableInfoMapPos
+//      )
+//    }
+//  }
 
-    override def writePayload(buf: ByteBuffer): ByteBuffer = {
-      buf.putLong(boxPositionPos)
-      buf.putLong(episodeInformPos)
-      buf.putLong(episodeStatusPos)
-      buf.putLong(endOfFramePos)
-      buf.putLong(snapshotPos)
-      buf.putLong(beginOfFramePos)
-      buf
-    }
 
-    lazy val asMap = Map(
-      BoxType.boxIndexes -> boxPositionPos,
-      BoxType.episodeInform -> episodeInformPos,
-      BoxType.episodeStatus -> episodeStatusPos,
-      BoxType.endOfFrame -> endOfFramePos,
-      BoxType.snapshotPosition -> snapshotPos,
-      BoxType.beginOfFrame -> beginOfFramePos
-    )
-  }
-
-  object BoxIndexes {
-    def readFromBuffer(buf: ByteBuffer): Try[BoxIndexes] = Try {
-      val boxPositionPos = buf.getLong
-      val episodeInformPos = buf.getLong
-      val episodeStatusPos = buf.getLong
-      val endOfFramePos = buf.getLong
-      val snapshotPos = buf.getLong
-      val beginOfFramePos = buf.getLong
-      BoxIndexes(
-        boxPositionPos,
-        episodeInformPos,
-        episodeStatusPos,
-        endOfFramePos,
-        snapshotPos,
-        beginOfFramePos
-      )
-    }
-  }
 
 
   final case class EpisodeInform(frameCount: Int, snapshotCount: Int) extends Box(BoxType.episodeInform) {
@@ -368,6 +375,148 @@ object Boxes {
       BeginOfFrame()
     }
   }
+
+  final case class MutableInfoMap(
+                                        infoMap:Map[String,Array[Byte]]
+                                        ) extends Box(BoxType.mutableInfoMap){
+
+    override lazy val payloadSize: Int = {
+      4 + infoMap.map{
+        case (key,value) =>
+          8 + key.getBytes(utf8).length + value.length
+      }.sum
+    }
+
+    override def writePayload(buf: ByteBuffer): ByteBuffer = {
+      buf.putInt(infoMap.size)
+      infoMap.foreach{
+        case (key,value) =>
+          val keyBytes = key.getBytes(utf8)
+          buf.putInt(keyBytes.length)
+          buf.put(keyBytes)
+          buf.putInt(value.length)
+          buf.put(value)
+      }
+      buf
+    }
+
+    override def equals(obj: scala.Any): Boolean = {
+      obj match {
+        case MutableInfoMap(map) =>
+          if(map.size == infoMap.size){
+            ! map.exists{
+              case (key,value) =>
+                infoMap.get(key).isEmpty || !Utils.arrayEquals(value, infoMap(key))
+            }
+          } else false
+        case _ => false
+      }
+    }
+  }
+
+  object MutableInfoMap {
+    def readFromBuffer(buf: ByteBuffer) = Try {
+      var map = Map.empty[String,Array[Byte]]
+      var mapSize = buf.getInt()
+      while (mapSize > 0){
+        val keyLen = buf.getInt()
+        val keyBytes = new Array[Byte](keyLen)
+        buf.get(keyBytes)
+        val valueLen = buf.getInt()
+        val value = new Array[Byte](valueLen)
+        buf.get(value)
+        map += (new String(keyBytes, utf8) -> value)
+        mapSize -= 1
+      }
+
+      MutableInfoMap(map)
+    }
+  }
+
+
+  final case class TmpBufferBoxNum(
+                                   boxNum:Int
+                                 ) extends Box(BoxType.tmpBufferBoxNum){
+
+    override lazy val payloadSize: Int = 4
+
+    override def writePayload(buf: ByteBuffer): ByteBuffer = {
+      buf.putInt(boxNum)
+      buf
+    }
+
+  }
+
+  object TmpBufferBoxNum {
+    def readFromBuffer(buf: ByteBuffer) = Try {
+      val num = buf.getInt()
+      TmpBufferBoxNum(num)
+    }
+  }
+
+  final case class BoxIndexPosition(
+                                    position: Long
+                                  ) extends Box(BoxType.boxIndexPosition){
+
+    override lazy val payloadSize: Int = 8
+
+    override def writePayload(buf: ByteBuffer): ByteBuffer = {
+      buf.putLong(position)
+      buf
+    }
+
+  }
+
+  object BoxIndexPosition {
+    def readFromBuffer(buf: ByteBuffer) = Try {
+      val position = buf.getLong()
+      BoxIndexPosition(position)
+    }
+  }
+
+  final case class BoxIndexes(
+                               indexMap: Map[String,Long]
+                             ) extends Box(BoxType.boxIndexes) {
+    override lazy val payloadSize: Int = {
+      4 + indexMap.map{
+        case (boxType, _) =>
+          12 + boxType.getBytes(utf8).length
+      }.sum
+    }
+
+    override def writePayload(buf: ByteBuffer): ByteBuffer = {
+      buf.putInt(indexMap.size)
+      indexMap.foreach{
+        case (key,value) =>
+          val keyBytes = key.getBytes(utf8)
+          buf.putInt(keyBytes.length)
+          buf.put(keyBytes)
+          buf.putLong(value)
+      }
+      buf
+    }
+
+  }
+
+  object BoxIndexes {
+    def readFromBuffer(buf: ByteBuffer): Try[BoxIndexes] = Try {
+      var map = Map.empty[String,Long]
+      var mapSize = buf.getInt()
+      while (mapSize > 0){
+        val keyLen = buf.getInt()
+        val keyBytes = new Array[Byte](keyLen)
+        buf.get(keyBytes)
+        val value = buf.getLong()
+        map += (new String(keyBytes, utf8) -> value)
+        mapSize -= 1
+      }
+
+      BoxIndexes(map)
+    }
+  }
+
+
+
 
 
 }
