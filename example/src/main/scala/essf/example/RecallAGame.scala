@@ -38,6 +38,7 @@ object RecallAGame {
     println(s"version: $version")
     println(s"gameInfo: $gameInfo")
     println(s"initState: $initState")
+    println(s"mutableInfo: ${input.mutableInfoIterable.map(t => (t._1, bytes2str(t._2)))}")
 
     input
   }

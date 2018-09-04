@@ -18,12 +18,17 @@ object RecordAGame {
     val recorder = getRecorder(targetFile)
     val frames = getTestFrames
 
+    recorder.putMutableInfo("playerJoin","1-1-2".getBytes(utf8))
+
     frames.foreach {
       case Some((events, stateOption)) =>
         recorder.writeFrame(events.getBytes(utf8), stateOption.map(_.getBytes(utf8)))
       case None =>
         recorder.writeEmptyFrame()
+        recorder.putMutableInfo("playerJoin","1-1-2-4".getBytes(utf8))
     }
+
+    recorder.putMutableInfo("playerJoin","1-1-2-4-5".getBytes(utf8))
 
     recorder.finish()
     println(s"Write finish: $targetFile")
