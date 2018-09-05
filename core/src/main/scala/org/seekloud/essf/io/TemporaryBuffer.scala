@@ -26,13 +26,6 @@ private[essf] class TemporaryBuffer(targetFile: String){
 
   }
 
-  def refreshBuffer(boxes:Iterable[Box]): Unit = {
-    tmpBufferWriter.foreach{ writer =>
-      writer.position(0L)
-      writer.put(Boxes.TmpBufferBoxNum(boxes.size))
-      boxes.foreach(writer.put)
-    }
-  }
 
 
   def write2Buffer(box:Box): Unit = {
