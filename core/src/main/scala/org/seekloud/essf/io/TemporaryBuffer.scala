@@ -1,7 +1,10 @@
 package org.seekloud.essf.io
 
 import java.io.File
+
 import org.seekloud.essf.box.{Box, Boxes}
+
+import scala.annotation.tailrec
 
 
 /**
@@ -14,7 +17,13 @@ private[essf] class TemporaryBuffer(targetFile: String){
   private[this] var tmpBufferWriter: Option[ESSFWriter] = None
 
   def init(): Unit = {
+    val tmpFile = new File(tmpBufferFile)
+    if(tmpFile.exists()){
+      tmpFile.delete()
+    }
     tmpBufferWriter = Some(new ESSFWriter(tmpBufferFile))
+    tmpBufferWriter.foreach(_.position(0L))
+
   }
 
   def refreshBuffer(boxes:Iterable[Box]): Unit = {
@@ -26,6 +35,13 @@ private[essf] class TemporaryBuffer(targetFile: String){
   }
 
 
+  def write2Buffer(box:Box): Unit = {
+    tmpBufferWriter.foreach{ writer =>
+      writer.put(box)
+    }
+  }
+
+
   // fix file, get boxIndex and mutableInfoMap from tmp file
   def readBuffer(): Iterable[Box] = {
     val tmpFile = new File(tmpBufferFile)
@@ -33,14 +49,13 @@ private[essf] class TemporaryBuffer(targetFile: String){
       val reader = new ESSFReader(tmpBufferFile)
       var boxes: List[Box] = Nil
       try {
-        var tmpBufferBoxNum = reader.get().asInstanceOf[Boxes.TmpBufferBoxNum].boxNum
-        while (tmpBufferBoxNum > 0){
+        while (true){
           boxes = reader.get() :: boxes
-          tmpBufferBoxNum -= 1
         }
       } catch {
         case e: Exception =>
-          e.printStackTrace()
+          println(s"fix [$tmpBufferFile] got an EXPECTED exception[${e.getClass}]: ${e.getMessage}")
+//          e.printStackTrace()
       } finally {
         reader.close()
       }

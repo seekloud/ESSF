@@ -461,6 +461,44 @@ object Boxes {
   }
 
 
+  final case class UpdateMutableInfo(
+                               key: String,
+                               value: Array[Byte]
+                             ) extends Box(BoxType.updateMutableInfo) {
+    override lazy val payloadSize: Int = 8 + key.getBytes(utf8).length + value.length
+
+    override def writePayload(buf: ByteBuffer): ByteBuffer = {
+      val keyBytes = key.getBytes(utf8)
+      buf.putInt(keyBytes.length)
+      buf.put(keyBytes)
+      buf.putInt(value.length)
+      buf.put(value)
+      buf
+    }
+
+    override def equals(obj: scala.Any): Boolean = {
+      obj match {
+        case UpdateMutableInfo(k, v) =>
+          if(k == key && Utils.arrayEquals(value, v)) true
+          else false
+        case _ => false
+      }
+    }
+  }
+
+  object UpdateMutableInfo {
+    def readFromBuffer(buf: ByteBuffer): Try[UpdateMutableInfo] = Try {
+      val keyLen = buf.getInt()
+      val keyBytes = new Array[Byte](keyLen)
+      buf.get(keyBytes)
+      val valueLen = buf.getInt()
+      val value = new Array[Byte](valueLen)
+      buf.get(value)
+      UpdateMutableInfo(new String(keyBytes, utf8), value)
+    }
+  }
+
+
 
 
 

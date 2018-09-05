@@ -39,7 +39,7 @@ class FrameOutputStream(
     writeBox(Boxes.InitState(initState))
     writeBox(Boxes.BeginOfFrame())
     tmpBuffer.init()
-    tmpBuffer.refreshBuffer(getPersistenceBoxes)
+    tmpBuffer.write2Buffer(getBoxIndexesBox)
     this
   }
 
@@ -53,6 +53,8 @@ class FrameOutputStream(
 //    }
     snapShotIndexSeq = input.getSnapshotIndexes.reverse
 
+    //update file position if file has no frame
+    filePosition = input.getFilePosition
     var reachToEnd = false
     while (!reachToEnd) {
       try {
@@ -73,6 +75,9 @@ class FrameOutputStream(
               case b : Boxes.SimulatorFrame =>
                 filePosition += b.size
                 currentFrame += 1
+              case b : Boxes.EmptyFrame =>
+                filePosition += b.size
+                currentFrame += 1
               case _ =>
             }
             case None =>
@@ -89,10 +94,15 @@ class FrameOutputStream(
     }
     tmpBuffer.readBuffer().foreach{
       case box: Boxes.MutableInfoMap =>
+        mutableInfoMap.clear()
         box.infoMap.foreach{
           case (k, v) => mutableInfoMap.put(k, v)
         }
+
+      case box: Boxes.UpdateMutableInfo => mutableInfoMap.put(box.key, box.value)
+
       case box: Boxes.BoxIndexes =>
+        boxPositions.clear()
         box.indexMap.foreach{
           case (k, v) => boxPositions.put(k, v)
         }
@@ -128,7 +138,8 @@ class FrameOutputStream(
     }
 
     tmpBuffer.init()
-    tmpBuffer.refreshBuffer(getPersistenceBoxes)
+    tmpBuffer.write2Buffer(getBoxIndexesBox)
+    tmpBuffer.write2Buffer(getMutableInfoMapBox)
 
     updateEpisodeStatus(false)
     writeFrame(eventsData, Some(stateData))
@@ -259,7 +270,7 @@ class FrameOutputStream(
 
   def putMutableInfo(key: String, value: Array[Byte]): Option[Array[Byte]] = {
     val returnValue = mutableInfoMap.put(key, value)
-    tmpBuffer.refreshBuffer(getPersistenceBoxes)
+    tmpBuffer.write2Buffer(Boxes.UpdateMutableInfo(key, value))
     returnValue
   }
 
@@ -280,6 +291,11 @@ class FrameOutputStream(
     Boxes.BoxIndexes(boxPositions.toMap),
     Boxes.MutableInfoMap(mutableInfoMap.toMap)
   )
+
+  private[this] def getBoxIndexesBox: Boxes.BoxIndexes = Boxes.BoxIndexes(boxPositions.toMap)
+
+  private[this] def getMutableInfoMapBox: Boxes.MutableInfoMap = Boxes.MutableInfoMap(mutableInfoMap.toMap)
+
 
   private[this] def genMutableInfoMapBox(): Unit = {
     writeBox(Boxes.MutableInfoMap(mutableInfoMap.toMap))

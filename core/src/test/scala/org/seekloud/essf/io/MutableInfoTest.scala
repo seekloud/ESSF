@@ -3,6 +3,7 @@ package org.seekloud.essf.io
 import java.io.File
 
 import org.seekloud.essf.Utils
+import org.seekloud.essf.box.Boxes
 import org.seekloud.essf.test.UnitSpec
 
 import scala.collection.mutable
@@ -396,6 +397,82 @@ class MutableInfoTest extends UnitSpec {
       tmpMutableFileExists &&
         epInfo.frameCount == 8 &&
         targets.equals(expectList) &&
+        keyValueIsRight &&
+        checkMutableInfoIterableEquals(mutableInfoMap.toIterable,mutableInfoIterable)
+    )
+  }
+
+  it can "work fix incomplete tmp file" in {
+    val file = tmpFile("updateMutableInfo6.essf")
+    val output = getOutputStream(file)
+
+
+
+    val updateMutableInfoAction: IndexedSeq[(Long,(String,Array[Byte]))] = IndexedSeq(
+      (1,("11", str2bytes("0aaa"))),
+      (1,("134", str2bytes("1bbb"))),
+      (3,("11", str2bytes("1aaa"))),
+      (4,("134", str2bytes("2bbb"))),
+      (5,("15", str2bytes("3ccc"))),
+      (5,("11", str2bytes("3aaa")))
+    )
+
+    val mutableInfoMap: mutable.HashMap[String, Array[Byte]] = mutable.HashMap.empty[String, Array[Byte]]
+
+    updateMutableInfoAction.foreach {
+      case (_,(key, value)) =>
+        output.putMutableInfo(key,value)
+        mutableInfoMap.put(key,value)
+
+    }
+
+    output.writeEmptyFrame()
+    output.writeFrame(str2bytes("232"))
+
+
+    val destroyAction = IndexedSeq(
+      (1,("11", str2bytes("9aaa")))
+    )
+    destroyAction.foreach {
+      case (_,(key, value)) =>
+        output.putMutableInfo(key,value)
+    }
+
+    val tmpMutableFile = new File(file+".tmp")
+    val tmpMutableFileExists = tmpMutableFile.exists()
+
+    val copyFile = file+ "copy"
+
+    println(s"length:${new File(file).length()}")
+    copyPartFile(file,copyFile,new File(file).length())
+    copyPartFile(file+".tmp",copyFile+".tmp", tmpMutableFile.length() - 2)
+
+    println(s"length:${new File(copyFile).length()}")
+
+
+    val fixOutput = new FrameOutputStream(copyFile)
+    fixOutput.fix()
+
+    println(s"length:${new File(copyFile).length()}")
+
+    val (input, epInfo) = getInputStream(copyFile)
+    val mutableInfoIterable = input.mutableInfoIterable
+    println(s"mutable Info $mutableInfoIterable")
+
+
+    val keyValueIsRight:Boolean = !mutableInfoMap.map{
+      case (key, value) =>
+        val valueOpt = input.getMutableInfo(key)
+        valueOpt.nonEmpty && Utils.arrayEquals(value,valueOpt.get)
+    }.exists(_ == false)
+    input.close()
+
+
+
+
+    assert(
+      tmpMutableFileExists &&
+        epInfo.frameCount == 2 &&
         keyValueIsRight &&
         checkMutableInfoIterableEquals(mutableInfoMap.toIterable,mutableInfoIterable)
     )

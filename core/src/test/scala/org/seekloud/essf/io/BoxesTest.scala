@@ -191,6 +191,10 @@ class BoxesTest extends UnitSpec {
   }
 
 
+  "Update Mutable Info Box" should "write and read keeping the same" in {
+    val targetBox = Boxes.UpdateMutableInfo("test", str2bytes("test123"))
+    writeAndRead(targetBox, tmpFile(targetBox.boxType + ".essf"))
+  }
 
 
 }

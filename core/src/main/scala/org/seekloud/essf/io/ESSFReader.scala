@@ -70,6 +70,8 @@ private[essf] class ESSFReader(file: String) {
       case BoxType.mutableInfoMap => Boxes.MutableInfoMap.readFromBuffer(buf)
       case BoxType.tmpBufferBoxNum => Boxes.TmpBufferBoxNum.readFromBuffer(buf)
       case BoxType.boxIndexPosition => Boxes.BoxIndexPosition.readFromBuffer(buf)
+      case BoxType.updateMutableInfo => Boxes.UpdateMutableInfo.readFromBuffer(buf)
+
 
 
       //TODO

@@ -29,6 +29,7 @@ package object box {
     val mutableInfoMap = "muim"
     val boxIndexPosition = "bips"
     val tmpBufferBoxNum = "tbbn"
+    val updateMutableInfo = "upmi"
   }
 
 

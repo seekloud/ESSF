@@ -66,7 +66,7 @@ object TestUtils {
 
     val bufSize = 32 * 1024
     val buf = ByteBuffer.allocateDirect(bufSize)
-    assert(f1.size() > length)
+    assert(f1.size() >= length)
     var count = 0
     var remaind = length
     while (remaind > 0) {
