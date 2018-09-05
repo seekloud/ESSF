@@ -26,6 +26,10 @@ package object box {
     val emptyFrame = "emfr"
     val beginOfFrame = "bgfr"
     val endOfFrame = "eofr"
+    val mutableInfoMap = "muim"
+    val boxIndexPosition = "bips"
+    val tmpBufferBoxNum = "tbbn"
+    val updateMutableInfo = "upmi"
   }
 
 

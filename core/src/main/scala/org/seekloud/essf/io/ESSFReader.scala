@@ -67,8 +67,14 @@ private[essf] class ESSFReader(file: String) {
       case BoxType.`simulatorFrame` => Boxes.SimulatorFrame.readFromBuffer(buf)
       case BoxType.`endOfFrame` => Boxes.EndOfFrame.readFromBuffer(buf)
       case BoxType.`beginOfFrame` => Boxes.BeginOfFrame.readFromBuffer(buf)
+      case BoxType.mutableInfoMap => Boxes.MutableInfoMap.readFromBuffer(buf)
+      case BoxType.tmpBufferBoxNum => Boxes.TmpBufferBoxNum.readFromBuffer(buf)
+      case BoxType.boxIndexPosition => Boxes.BoxIndexPosition.readFromBuffer(buf)
+      case BoxType.updateMutableInfo => Boxes.UpdateMutableInfo.readFromBuffer(buf)
 
-        //TODO
+
+
+      //TODO
       case x =>
         throw new EssfIOException(s"unknown boxType error: $x")
     }

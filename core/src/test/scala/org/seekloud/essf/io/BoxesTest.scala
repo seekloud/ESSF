@@ -1,7 +1,7 @@
 package org.seekloud.essf.io
 
 import org.scalatest.Assertion
-import org.seekloud.essf.box.{Box, Boxes}
+import org.seekloud.essf.box.{Box, BoxType, Boxes}
 import org.seekloud.essf.test.UnitSpec
 
 /**
@@ -48,7 +48,16 @@ class BoxesTest extends UnitSpec {
 
 
   "BoxIndexes Box" should "write and read keeping the same" in {
-    val targetBox = Boxes.BoxIndexes(111l, 222l, 333l, 555l, 12345678901234l, 1234566l)
+    val map = Map(
+      BoxType.boxIndexPosition -> 111L,
+      BoxType.episodeInform -> 222L,
+      BoxType.episodeStatus -> 3333L,
+      BoxType.endOfFrame -> 444L,
+      BoxType.snapshotPosition -> 144441L,
+      BoxType.beginOfFrame -> 123232321L,
+      BoxType.mutableInfoMap -> 1001L
+    )
+    val targetBox = Boxes.BoxIndexes(map)
     writeAndRead(targetBox, tmpFile(targetBox.boxType + ".essf"))
   }
 
@@ -160,7 +169,32 @@ class BoxesTest extends UnitSpec {
     writeAndRead(targetBox, tmpFile(targetBox.boxType + ".essf"))
   }
 
+  "Mutable Info Box" should "write and read keeping the same" in {
+    val map = Map(
+      getReadableString(10) -> getReadableString(20).getBytes("utf-8"),
+      getReadableString(13) -> getReadableString(20).getBytes("utf-8"),
+      getReadableString(12) -> getReadableString(20).getBytes("utf-8")
+    )
+    val targetBox = Boxes.MutableInfoMap(map)
+    writeAndRead(targetBox, tmpFile(targetBox.boxType + ".essf"))
+  }
 
+
+  "Tmp Buffer Boxes Num Box" should "write and read keeping the same" in {
+    val targetBox = Boxes.TmpBufferBoxNum(100)
+    writeAndRead(targetBox, tmpFile(targetBox.boxType + ".essf"))
+  }
+
+  "Box Index Position Box" should "write and read keeping the same" in {
+    val targetBox = Boxes.BoxIndexPosition(10000L)
+    writeAndRead(targetBox, tmpFile(targetBox.boxType + ".essf"))
+  }
+
+
+  "Update Mutable Info Box" should "write and read keeping the same" in {
+    val targetBox = Boxes.UpdateMutableInfo("test", str2bytes("test123"))
+    writeAndRead(targetBox, tmpFile(targetBox.boxType + ".essf"))
+  }
 
 
 }

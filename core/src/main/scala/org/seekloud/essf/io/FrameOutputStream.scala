@@ -1,8 +1,6 @@
 package org.seekloud.essf.io
 
-import org.seekloud.essf.box.Boxes.BoxIndexes
 import org.seekloud.essf.box._
-
 import scala.collection.mutable
 
 /**
@@ -19,6 +17,9 @@ class FrameOutputStream(
   private[this] var filePosition = 0l
   private[this] var snapShotIndexSeq = List.empty[(Int, Long)]
   private[this] var boxWriter: Option[ESSFWriter] = None
+  private[this] val mutableInfoMap = mutable.HashMap.empty[String,Array[Byte]]
+  private[this] val tmpBuffer = new TemporaryBuffer(targetFile)
+
 
   def init(
     simulatorId: String,
@@ -27,14 +28,18 @@ class FrameOutputStream(
     initState: Array[Byte]
   ): FrameOutputStream = {
     boxWriter = Some(new ESSFWriter(targetFile))
+    initBoxPosition()
     writeBox(Boxes.FileMeta(IO_VERSION, System.currentTimeMillis()))
-    writeBox(Boxes.BoxIndexes(filePosition, -1l, -1l, -1l, -1l, -1l))
+    writeBox(Boxes.BoxIndexPosition(-1L))
+//    writeBox(Boxes.BoxIndexes(filePosition, -1l, -1l, -1l, -1l, -1l, -1L))
     writeBox(Boxes.EpisodeInform(0, 0))
     writeBox(Boxes.EpisodeStatus(false))
     writeBox(Boxes.SimulatorInform(simulatorId, dataVersion))
     writeBox(Boxes.SimulatorMetadata(simulatorMetadata))
     writeBox(Boxes.InitState(initState))
     writeBox(Boxes.BeginOfFrame())
+    tmpBuffer.init()
+    tmpBuffer.write2Buffer(getBoxIndexesBox)
     this
   }
 
@@ -43,11 +48,13 @@ class FrameOutputStream(
     val epInfos = input.init(withSnapshot = false)
     //assert(!epInfos.isFinished, "this file need no fix.")
 
-    input.getBoxPositions.asMap.map {
-      case (k, v) => boxPositions.put(k, v)
-    }
+//    input.getBoxPositions.indexMap.map {
+//      case (k, v) => boxPositions.put(k, v)
+//    }
     snapShotIndexSeq = input.getSnapshotIndexes.reverse
 
+    //update file position if file has no frame
+    filePosition = input.getFilePosition
     var reachToEnd = false
     while (!reachToEnd) {
       try {
@@ -68,6 +75,9 @@ class FrameOutputStream(
               case b : Boxes.SimulatorFrame =>
                 filePosition += b.size
                 currentFrame += 1
+              case b : Boxes.EmptyFrame =>
+                filePosition += b.size
+                currentFrame += 1
               case _ =>
             }
             case None =>
@@ -81,6 +91,21 @@ class FrameOutputStream(
     } catch {
       case e: Exception =>
         e.printStackTrace()
+    }
+    tmpBuffer.readBuffer().foreach{
+      case box: Boxes.MutableInfoMap =>
+        mutableInfoMap.clear()
+        box.infoMap.foreach{
+          case (k, v) => mutableInfoMap.put(k, v)
+        }
+
+      case box: Boxes.UpdateMutableInfo => mutableInfoMap.put(box.key, box.value)
+
+      case box: Boxes.BoxIndexes =>
+        boxPositions.clear()
+        box.indexMap.foreach{
+          case (k, v) => boxPositions.put(k, v)
+        }
     }
 
     boxWriter = Some(new ESSFWriter(targetFile))
@@ -105,9 +130,16 @@ class FrameOutputStream(
     boxWriter = Some(new ESSFWriter(targetFile))
     boxWriter.get.position(filePosition)
 
-    input.getBoxPositions.asMap.map {
+    input.getBoxPositions.indexMap.map {
       case (k, v) => boxPositions.put(k, v)
     }
+    input.mutableInfoIterable.foreach{
+      case (k, v) => mutableInfoMap.put(k, v)
+    }
+
+    tmpBuffer.init()
+    tmpBuffer.write2Buffer(getBoxIndexesBox)
+    tmpBuffer.write2Buffer(getMutableInfoMapBox)
 
     updateEpisodeStatus(false)
     writeFrame(eventsData, Some(stateData))
@@ -124,17 +156,18 @@ class FrameOutputStream(
     updateBox(box)
   }
 
-  private[this] def updateBoxPositionBox(): Unit = {
-    val box = Boxes.BoxIndexes(
-      boxPositions(BoxType.boxIndexes),
-      boxPositions(BoxType.episodeInform),
-      boxPositions(BoxType.episodeStatus),
-      boxPositions(BoxType.endOfFrame),
-      boxPositions(BoxType.snapshotPosition),
-      boxPositions(BoxType.beginOfFrame)
-    )
-    updateBox(box)
-  }
+//  private[this] def updateBoxPositionBox(): Unit = {
+//    val box = Boxes.BoxIndexes(
+//      boxPositions(BoxType.boxIndexes),
+//      boxPositions(BoxType.episodeInform),
+//      boxPositions(BoxType.episodeStatus),
+//      boxPositions(BoxType.endOfFrame),
+//      boxPositions(BoxType.snapshotPosition),
+//      boxPositions(BoxType.beginOfFrame),
+//      boxPositions(BoxType.mutableInfoMap)
+//    )
+//    updateBox(box)
+//  }
 
   private[this] def genSnapshotIndexBox(): Unit = {
     writeBox(Boxes.SnapshotPosition(snapShotIndexSeq))
@@ -146,10 +179,12 @@ class FrameOutputStream(
       case _: Boxes.EmptyFrame => false
       case _: Boxes.SnapshotPosition => true
       case _: Boxes.EndOfFrame => true
-      case _: Boxes.BoxIndexes => true
+      case _: Boxes.BoxIndexPosition => true
+      //      case _: Boxes.BoxIndexes => true
       case _: Boxes.EpisodeStatus => true
       case _: Boxes.EpisodeInform => true
       case _: Boxes.BeginOfFrame => true
+      case _: Boxes.MutableInfoMap => true
       case _ => false
     }
   }
@@ -168,7 +203,7 @@ class FrameOutputStream(
 
     val canBeUpdated = box match {
       case _: Boxes.EpisodeInform => true
-      case _: Boxes.BoxIndexes => true
+      case _: Boxes.BoxIndexPosition => true
       case _: Boxes.EpisodeStatus => true
       case _ => false
     }
@@ -193,6 +228,8 @@ class FrameOutputStream(
       boxWriter.get.put(box, position)
     }
   }
+
+  protected[this] def getTargetFile(): String = targetFile
 
 
   def writeFrame(eventsData: Array[Byte], stateData: Option[Array[Byte]] = None): Int = {
@@ -219,11 +256,57 @@ class FrameOutputStream(
     writeBox(Boxes.EndOfFrame())
     updateEpisodeInfo()
     genSnapshotIndexBox()
+    genMutableInfoMapBox()
     writeBox(Boxes.EndOfFile())
-    updateBoxPositionBox()
+    genBoxIndexesBox()
+//    updateBoxPositionBox()
     updateEpisodeStatus(isFinish = true)
     //wait till all write finished.
     boxWriter.foreach(_.close())
+    tmpBuffer.close()
   }
+
+  def getMutableInfo(key: String): Option[Array[Byte]] = mutableInfoMap.get(key)
+
+  def putMutableInfo(key: String, value: Array[Byte]): Option[Array[Byte]] = {
+    val returnValue = mutableInfoMap.put(key, value)
+    tmpBuffer.write2Buffer(Boxes.UpdateMutableInfo(key, value))
+    returnValue
+  }
+
+  def mutableInfoIterable:Iterable[(String,Array[Byte])] = mutableInfoMap.toIterable
+
+
+  private[this] def initBoxPosition(): Unit = {
+    boxPositions.put(BoxType.boxIndexPosition, -1L)
+    boxPositions.put(BoxType.episodeInform, -1L)
+    boxPositions.put(BoxType.episodeStatus, -1L)
+    boxPositions.put(BoxType.endOfFrame, -1L)
+    boxPositions.put(BoxType.snapshotPosition, -1L)
+    boxPositions.put(BoxType.beginOfFrame, -1L)
+    boxPositions.put(BoxType.mutableInfoMap, -1L)
+  }
+
+  private[this] def getPersistenceBoxes: Iterable[Box] = List(
+    Boxes.BoxIndexes(boxPositions.toMap),
+    Boxes.MutableInfoMap(mutableInfoMap.toMap)
+  )
+
+  private[this] def getBoxIndexesBox: Boxes.BoxIndexes = Boxes.BoxIndexes(boxPositions.toMap)
+
+  private[this] def getMutableInfoMapBox: Boxes.MutableInfoMap = Boxes.MutableInfoMap(mutableInfoMap.toMap)
+
+
+  private[this] def genMutableInfoMapBox(): Unit = {
+    writeBox(Boxes.MutableInfoMap(mutableInfoMap.toMap))
+  }
+
+  private[this] def genBoxIndexesBox(): Unit = {
+    val boxIndexesPos = writeBox(Boxes.BoxIndexes(boxPositions.toMap))
+    updateBox(Boxes.BoxIndexPosition(boxIndexesPos))
+  }
+
+
+
 
 }
