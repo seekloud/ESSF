@@ -1,7 +1,7 @@
 
 
 lazy val baseSettings = Seq(
-  version := "0.0.1-beta2-SNAPSHOT",
+  version := "0.0.1-beta3",
   scalaVersion := "2.12.6",
   organization := "org.seekloud",
   scalacOptions ++= Seq(
@@ -73,7 +73,15 @@ lazy val publishSettings = Seq(
         <organization>seekloud</organization>
         <organizationUrl>https://github.com/seekloud</organizationUrl>
       </developer>
+      <developer>
+        <id>hongBry</id>
+        <name>Ruying Hong</name>
+        <url>https://github.com/hongBry</url>
+        <organization>seekloud</organization>
+        <organizationUrl>https://github.com/seekloud</organizationUrl>
+      </developer>
     </developers>
+
 )
 
 
