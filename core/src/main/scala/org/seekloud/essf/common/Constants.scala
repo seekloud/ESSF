@@ -7,7 +7,7 @@ package org.seekloud.essf.common
   */
 object Constants {
 
-  val LIB_VERSION = "0.0.1-beta2"
+  val LIB_VERSION = "0.0.1-beta3"
 
   val IO_VERSION: Byte = 1.toByte
 

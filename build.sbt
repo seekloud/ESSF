@@ -1,7 +1,7 @@
 
 
 lazy val baseSettings = Seq(
-  version := "0.0.1-beta2",
+  version := "0.0.1-beta3-SNAPSHOT",
   scalaVersion := "2.12.6",
   organization := "org.seekloud",
   scalacOptions ++= Seq(
