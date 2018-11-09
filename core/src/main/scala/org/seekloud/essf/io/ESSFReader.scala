@@ -17,15 +17,16 @@ import org.seekloud.essf.common.Constants._
   */
 private[essf] class ESSFReader(file: String) {
 
-
+  import ESSFReader.{readHead, HEAD_BUFF_SIZE}
 
   private val fc = new FileInputStream(new File(file)).getChannel
   private val defaultBuffer = ByteBuffer.allocateDirect(DEFAULT_BOX_BUFFER_SIZE)
+  private[this] val hBuff = ByteBuffer.allocateDirect(HEAD_BUFF_SIZE)
 
-  import ESSFReader.readHead
+
 
   def get(): Box = {
-    val (boxSize, boxType, payloadSize) = readHead(fc)
+    val (boxSize, boxType, payloadSize) = readHead(fc, hBuff)
     val buf =
       if (defaultBuffer.capacity() < payloadSize) {
         ByteBuffer.allocate(payloadSize)
@@ -93,10 +94,10 @@ object ESSFReader {
   val HEAD_BUFF_SIZE = 32
   val HEAD_OF_HEAD = 6
   val LARGE_SIZE_SIZE = 4
-  private[this] val hBuff = ByteBuffer.allocateDirect(HEAD_BUFF_SIZE)
 
 
-  private def readHead(fc: FileChannel): (Int, String, Int) = {
+
+  private def readHead(fc: FileChannel, hBuff: ByteBuffer): (Int, String, Int) = {
     hBuff.clear()
     hBuff.limit(HEAD_OF_HEAD)
     fc.read(hBuff)
